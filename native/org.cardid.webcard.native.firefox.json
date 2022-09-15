@@ -1,0 +1,9 @@
+{
+  "name": "org.cardid.webcard.native",
+  "description": "WebCard Native Helper App",
+  "path": "x64\\webcard.exe",
+  "type": "stdio",
+  "allowed_extensions": [
+    "webcard@cardid.org"
+  ]
+}
