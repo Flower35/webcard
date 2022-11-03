@@ -1,113 +1,16 @@
 /**
- * @file "native/src/os_specific.c"
+ * @file "native/src/os_specific/os_specific.c"
  * Operating-System-specific functions
  */
 
-#include "os_specific.h"
+#include "os_specific/os_specific.h"
 
 /**************************************************************/
 
-#if defined(_WIN32)
-
-  /**
-   * @brief This is a termination handler.
-   *
-   * This function that exists only when the target OS is Windows.
-   * @param ctrlType Parameter for this type of termination handler.
-   * @return `TRUE` if the `ctrlType` is recognized by the handler.
-   * Otherwise the OS handles this event.
-   */
-  BOOL
-  Win32_terminationHandler(DWORD ctrlType)
-  {
-    #if defined(_DEBUG)
-    {
-      switch (ctrlType)
-      {
-        case CTRL_C_EVENT:
-          OSSpecific_writeDebugMessage(
-            "{termination handler}: {CTRL_C_EVENT}");
-          return TRUE;
-
-        case CTRL_CLOSE_EVENT:
-          OSSpecific_writeDebugMessage(
-            "{termination handler}: {CTRL_CLOSE_EVENT}");
-          return TRUE;
-
-        case CTRL_BREAK_EVENT:
-          OSSpecific_writeDebugMessage(
-            "{termination handler}: {CTRL_BREAK_EVENT}");
-          return FALSE;
-      }
-    }
-    #endif
-
-    return FALSE;
-  }
-
-#endif
-
-/**************************************************************/
-
-#if defined(__linux__)
-
-  /**
-   * @brief This is a termination handler.
-   *
-   * This function that exists only when the target OS is Linux.
-   * @param signalNumber Parameter for this type of termination handler.
-   */
-  VOID
-  Linux_terminationHandler(int signalNumber)
-  {
-    #if defined(_DEBUG)
-    {
-      switch (signalNumber)
-      {
-        case SIGINT:
-          OSSpecific_writeDebugMessage(
-            "{termination handler}: {SIGINT}");
-          exit(EXIT_FAILURE);
-          break;
-      }
-    }
-    #endif
-  }
-
-#endif
-
-/**************************************************************/
-
-BOOL
-OSSpecific_registerTerminationHandler(void)
-{
-  #if defined(_WIN32)
-  {
-    return SetConsoleCtrlHandler(Win32_terminationHandler, TRUE);
-  }
-  #elif defined(__linux__)
-  {
-    sighandler_t signal_handler;
-
-    signal_handler = signal(SIGINT, Linux_terminationHandler);
-    if (SIG_ERR == signal_handler) { return FALSE; }
-
-    signal_handler = signal(SIGPIPE, SIG_IGN);
-    return (SIG_ERR != signal_handler);
-  }
-  #else
-  {
-    return FALSE;
-  }
-  #endif
-}
-
-/**************************************************************/
-
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 
   size_t
-  wcslen(_In_z_ LPCWSTR string)
+  OSSpecific_wideStrLen(_In_z_ LPCWSTR string)
   {
     size_t size = 0;
 
@@ -152,7 +55,7 @@ OSSpecific_validateTypesOfStreams(
 
     return TRUE;
   }
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(__APPLE__)
   {
     struct stat file_status;
 
@@ -160,7 +63,7 @@ OSSpecific_validateTypesOfStreams(
     {
       #if defined(_DEBUG)
       OSSpecific_writeDebugMessage(
-        "{fstat} failed: 0x%08X",
+        "{fstat} failed: errno=0x%08X",
         errno);
       #endif
 
@@ -181,7 +84,7 @@ OSSpecific_validateTypesOfStreams(
     {
       #if defined(_DEBUG)
       OSSpecific_writeDebugMessage(
-        "{fstat} failed: 0x%08X",
+        "{fstat} failed: errno=0x%08X",
         errno);
       #endif
 
@@ -247,14 +150,14 @@ OSSpecific_peekStream(
 
     return test_bool;
   }
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(__APPLE__)
   {
     int32_t result;
 
     struct pollfd fds =
     {
       .fd = stream,
-      .events = (POLLIN | POLLRDHUP)
+      .events = POLLIN
     };
 
     result = poll(&(fds), 1, 0);
@@ -263,7 +166,7 @@ OSSpecific_peekStream(
     {
       #if defined(_DEBUG)
       OSSpecific_writeDebugMessage(
-        "{poll} failed: 0x%08X",
+        "{poll} failed: errno=0x%08X",
         errno);
       #endif
 
@@ -284,7 +187,7 @@ OSSpecific_peekStream(
       {
         #if defined(_DEBUG)
         OSSpecific_writeDebugMessage(
-          "{ioctl} failed: 0x%08X",
+          "{ioctl} failed: errno=0x%08X",
           errno);
         #endif
 
@@ -304,6 +207,8 @@ OSSpecific_peekStream(
         "{poll} failed: Hung up");
     }
     #endif
+
+    /* @bug: This code is never reached on "macOS X"! */
 
     return FALSE;
   }
@@ -350,7 +255,7 @@ OSSpecific_readBytesFromStream(
     }
     #endif
   }
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(__APPLE__)
   {
     #if defined(_DEBUG)
     {
@@ -358,7 +263,7 @@ OSSpecific_readBytesFromStream(
       if (size == result) { return TRUE; }
 
       OSSpecific_writeDebugMessage(
-        "{read} failed: 0x%08X",
+        "{read} failed: errno=0x%08X",
         errno);
 
       return FALSE;
@@ -435,7 +340,7 @@ OSSpecific_writeBytesToStream(
 
     return FALSE;
   }
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(__APPLE__)
   {
     #if defined(_DEBUG)
     {
@@ -486,7 +391,7 @@ OSSpecific_writeBytesToStream(
         return;
       }
     }
-    #elif defined(__linux__)
+    #elif defined(__linux__) || defined(__APPLE__)
     {
       stderr_stream = STDERR_FILENO;
     }

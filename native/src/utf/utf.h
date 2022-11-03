@@ -7,7 +7,7 @@
 #ifndef H_WEBCARD__UTF
 #define H_WEBCARD__UTF
 
-#include "os_specific.h"
+#include "os_specific/os_specific.h"
 
 #ifdef __cplusplus
   extern "C" {

@@ -1,5 +1,5 @@
 /**
- * @file "native/src/os_specific.h"
+ * @file "native/src/os_specific/os_specific.h"
  * Operating-System-specific definitions and declarations
  */
 
@@ -25,9 +25,7 @@
   /** Windows API */
   #include <windows.h>
 
-#elif defined(__linux__)
-
-  #define _GNU_SOURCE 1
+#elif defined(__linux__) || defined(__APPLE__)
 
   /**
    * Standard C library, includes:
@@ -43,9 +41,6 @@
   #include <poll.h>
   #include <unistd.h>
 
-  /** Linux Signals */
-  #include <signal.h>
-
   /**
    * C library for strings, includes:
    *  `strlen()`, `memcpy()`.
@@ -53,7 +48,8 @@
   #include <string.h>
 
 #else
-  #error("Unsupported operating system, sorry!")
+  #error("Unsupported Operating System, sorry!")
+  #pragma GCC error "Unsupported Operating System, sorry!"
 #endif
 
 
@@ -64,26 +60,35 @@
 /** Timing */
 #include <time.h>
 
+#if defined(__APPLE__)
+  #define FIXED_CLOCKS_PER_SEC  (CLOCKS_PER_SEC / 100)
+#else
+  #define FIXED_CLOCKS_PER_SEC  CLOCKS_PER_SEC
+#endif
+
 /** Fixed-width integer type definitions */
 #include <stdint.h>
 
-#if defined(_DEBUG)
+/**
+ * Standard C Input-output declarations, includes:
+ *  `snprintf()`, `vsnprintf()`.
+ */
+#include <stdio.h>
 
-  /** Standard C Input-output declarations. Required for `vsnprintf()`. */
-  #include <stdio.h>
+#if defined(_DEBUG)
 
   /** Accessing variable-argument lists. */
   #include <stdarg.h>
 
-  /** Printing-out error codes. */
-  #include <errno.h>
-
 #endif
+
+/** Checking error codes when standard functions fail. */
+#include <errno.h>
 
 #if defined(_WIN32)
   typedef HANDLE os_specific_stream_t;
 
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
   typedef int os_specific_stream_t;
   #include "wtypes_for_unix.h"
 
@@ -99,28 +104,14 @@ typedef BYTE const * LPCBYTE;
 /* CUSTOM WIDE CHARS (exactly 16-bit wide)                    */
 /**************************************************************/
 
-#if defined(__linux__)
+#if defined(_WIN32)
+  #define OSSpecific_wideStrLen wcslen
 
+#elif defined(__linux__) || defined(__APPLE__)
   extern size_t
-  wcslen(_In_z_ LPCWSTR string);
+  OSSpecific_wideStrLen(_In_z_ LPCWSTR string);
 
 #endif
-
-
-/**************************************************************/
-/* TERMINATING THE APPLICATION                                */
-/**************************************************************/
-
-/**
- * @brief Registers a termination handler.
- *
- * Termination handler is called when the application
- * is unexpectedly closed (forcefully terminated).
- * @return `TRUE` when OS-specific handler was successfully
- * registered, otherwise `FALSE`.
- */
-extern BOOL
-OSSpecific_registerTerminationHandler(void);
 
 
 /**************************************************************/

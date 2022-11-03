@@ -1,12 +1,12 @@
 /**
- * @file "native/src/misc.h"
+ * @file "native/src/misc/misc.h"
  * Declarations for miscellaneous functions.
  */
 
 #ifndef H_WEBCARD__MISC
 #define H_WEBCARD__MISC
 
-#include "os_specific.h"
+#include "os_specific/os_specific.h"
 
 #ifdef __cplusplus
   extern "C" {

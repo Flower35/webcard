@@ -1,11 +1,16 @@
 @ECHO OFF
 CLS
 
-TASKKILL /F /T /IM webcard.exe
+TASKKILL /F /T /IM webcard.exe 2>NUL
 ECHO.
 
-mingw32-make
+mingw32-make %*
 ECHO.
- 
-DATE/T
-TIME/T
+
+ECHO ERRORLEVEL=%ERRORLEVEL%
+
+@PROMPT [$D, $T]$S
+@ECHO ON
+REM
+@ECHO OFF
+PROMPT=

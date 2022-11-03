@@ -1,9 +1,9 @@
 /**
- * @file "native/src/webcard.c"
+ * @file "native/src/webcard_main.c"
  * WebCard Native App :: Entry Point
  */
 
-#include "smart_cards.h"
+#include "smart_cards/smart_cards.h"
 
 #if defined(_WIN32)
   #include <stdio.h>
@@ -27,7 +27,7 @@ validateInputOutputPipes(void)
     stdin_stream = GetStdHandle(STD_INPUT_HANDLE);
     stdout_stream = GetStdHandle(STD_OUTPUT_HANDLE);
   }
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(__APPLE__)
   {
     stdin_stream = STDIN_FILENO;
     stdout_stream = STDOUT_FILENO;
@@ -48,16 +48,6 @@ main(void)
   {
     return EXIT_FAILURE;
   }
-
-  #if defined(_DEBUG)
-  if (!OSSpecific_registerTerminationHandler())
-  {
-    OSSpecific_writeDebugMessage(
-      "Failed to register a {termination handler}");
-
-    return EXIT_FAILURE;
-  }
-  #endif
 
   #if defined(_DEBUG)
   OSSpecific_writeDebugMessage(

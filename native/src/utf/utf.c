@@ -3,8 +3,8 @@
  * Unicode Transformation Format text (UTF-8 and UTF-16)
  */
 
-#include "utf.h"
-#include "misc.h"
+#include "utf/utf.h"
+#include "misc/misc.h"
 
 /**************************************************************/
 
@@ -283,7 +283,7 @@ UTF8String_writeToStandardOutput(
       return FALSE;
     }
   }
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(__APPLE__)
   {
     stdout_stream = STDOUT_FILENO;
   }
@@ -510,7 +510,7 @@ UTF16String_pushText(
 {
   if (0 == rightTextLength)
   {
-    rightTextLength = wcslen(rightText);
+    rightTextLength = OSSpecific_wideStrLen(rightText);
 
     if (0 == rightTextLength)
     {

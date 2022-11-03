@@ -1,499 +1,9 @@
 /**
- * @file "native/src/smart_cards.c"
+ * @file "native/src/smart_cards/sc_webcard.c"
  * Communication with Smart Card Readers (physical or virtual peripherals).
  */
 
-#include "smart_cards.h"
-
-/**************************************************************/
-
-VOID
-SCardConnection_init(
-  _Out_ SCardConnection connection)
-{
-  connection->handle         = 0;
-  connection->activeProtocol = 0;
-  connection->ignoreCounter  = 0;
-}
-
-/**************************************************************/
-
-BOOL
-SCardConnection_open(
-  _Inout_ SCardConnection connection,
-  _In_ const SCARDCONTEXT context,
-  _In_ LPCTSTR readerName,
-  _In_ const DWORD shareMode)
-{
-  if (0 != connection->handle)
-  {
-    return TRUE;
-  }
-
-  LONG result = SCardConnect(
-    context,
-    readerName,
-    shareMode,
-    (SCARD_SHARE_DIRECT == shareMode) ?
-      0 :
-      (SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1),
-    &(connection->handle),
-    &(connection->activeProtocol));
-
-  if (SCARD_S_SUCCESS != result)
-  {
-    #if defined(_DEBUG)
-    {
-      OSSpecific_writeDebugMessage(
-        "{SCardConnect} failed: 0x%08X (%s)",
-        (uint32_t) result,
-        WebCard_errorLookup(result));
-    }
-    #endif
-
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/**************************************************************/
-
-BOOL
-SCardConnection_close(
-  _Inout_ SCardConnection connection)
-{
-  if (0 == connection->handle)
-  {
-    return TRUE;
-  }
-
-  LONG result = SCardDisconnect(
-    connection->handle,
-    SCARD_LEAVE_CARD);
-
-  connection->handle = 0;
-
-  return (SCARD_S_SUCCESS == result);
-}
-
-/**************************************************************/
-
-BOOL
-SCardConnection_transceiveSingle(
-  _In_ ConstSCardConnection connection,
-  _In_ LPCBYTE input,
-  _In_ const DWORD inputLength,
-  _Out_ LPBYTE output,
-  _Inout_ LPDWORD outputLengthPointer)
-{
-  LONG result = SCardTransmit(
-    connection->handle,
-    (SCARD_PROTOCOL_T0 == connection->activeProtocol) ?
-      SCARD_PCI_T0 :
-      SCARD_PCI_T1,
-    input,
-    inputLength,
-    NULL,
-    output,
-    outputLengthPointer);
-
-  if (SCARD_S_SUCCESS != result)
-  {
-    #if defined(_DEBUG)
-    {
-      OSSpecific_writeDebugMessage(
-        "{SCardTransmit} failed: 0x%08X (%s)",
-        (uint32_t) result,
-        WebCard_errorLookup(result));
-    }
-    #endif
-
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/**************************************************************/
-
-BOOL
-SCardConnection_transceiveMultiple(
-  _In_ ConstSCardConnection connection,
-  _Inout_ UTF8String hexStringResult,
-  _In_ LPCBYTE input,
-  _In_ const DWORD inputLength,
-  _Out_ LPBYTE output,
-  _In_ const DWORD outputLength)
-{
-  BOOL test_bool;
-  DWORD bytesReceived = outputLength;
-  LPDWORD bytesReceivedPointer = &(bytesReceived);
-  BYTE getResponseApdu[5] = {0x00, 0xC0, 0x00, 0x00};
-
-  test_bool = SCardConnection_transceiveSingle(
-    connection,
-    input,
-    inputLength,
-    output,
-    bytesReceivedPointer);
-
-  if (!test_bool) { return FALSE; }
-
-  /* Check if "Status Word 1" is "Response bytes still available" */
-
-  while ((outputLength >= 2) && (0x61 == output[outputLength - 2]))
-  {
-    test_bool = UTF8String_pushBytesAsHex(
-      hexStringResult,
-      bytesReceived - 2,
-      output);
-
-    if (!test_bool) { return FALSE; }
-
-    /* Move "Status Word 2" into "GET RESPONSE" APDU */
-
-    getResponseApdu[4] = output[bytesReceived - 1];
-
-    /* Continue transmission */
-
-    bytesReceived = outputLength;
-
-    test_bool = SCardConnection_transceiveSingle(
-      connection,
-      getResponseApdu,
-      5,
-      output,
-      bytesReceivedPointer);
-
-    if (!test_bool) { return FALSE; }
-  }
-
-  /* The last or the only block */
-
-  return UTF8String_pushBytesAsHex(
-    hexStringResult,
-    bytesReceived,
-    output);
-}
-
-/**************************************************************/
-
-VOID
-SCardReaderDB_init(
-  _Out_ SCardReaderDB database)
-{
-  database->count = 0;
-  database->states = NULL;
-  database->connections = NULL;
-}
-
-/**************************************************************/
-
-VOID
-SCardReaderDB_destroy(
-  _Inout_ SCardReaderDB database)
-{
-  DWORD i;
-
-  if (NULL != database->states)
-  {
-    for (i = 0; i < database->count; i++)
-    {
-      if (NULL != database->states[i].szReader)
-      {
-        free((LPVOID) database->states[i].szReader);
-      }
-    }
-
-    free(database->states);
-  }
-
-  if (NULL != database->connections)
-  {
-    for (i = 0; i < database->count; i++)
-    {
-      SCardConnection_close(&(database->connections[i]));
-    }
-
-    free(database->connections);
-  }
-}
-
-/**************************************************************/
-
-BOOL
-SCardReaderDB_load(
-  _Out_ SCardReaderDB database,
-  _In_ LPCTSTR readerNames)
-{
-  DWORD bytesize;
-  DWORD name_length;
-
-  LPCTSTR next_reader;
-  LPSCARD_READERSTATE test_readerstate;
-  SCardConnection test_connection;
-
-  /* Initialize outgoing `SCardReaderDB` structure */
-
-  SCardReaderDB_init(database);
-
-  /* Iterate through every Smart Card Reader */
-
-  next_reader = readerNames;
-
-  while (next_reader[0])
-  {
-    /* Expand the "Smart Card Reader State" list */
-
-    bytesize = sizeof(SCARD_READERSTATE) * (1 + database->count);
-    test_readerstate = realloc(database->states, bytesize);
-    if (NULL == test_readerstate) { return FALSE; }
-
-    database->states = test_readerstate;
-    test_readerstate = &(database->states[database->count]);
-
-    /* Initialize "Smart Card Reader State" structure for current reader */
-
-    test_readerstate->szReader = NULL;
-    test_readerstate->dwCurrentState = SCARD_STATE_UNAWARE;
-    test_readerstate->cbAtr = 0;
-
-    /* Expand the "Smart Card Connection" list */
-
-    bytesize = sizeof(struct scard_connection_t) * (1 + database->count);
-    test_connection = realloc(database->connections, bytesize);
-    if (NULL == test_connection) { return FALSE; }
-
-    database->connections = test_connection;
-    test_connection = &(database->connections[database->count]);
-
-    /* Initialize "Smart Card Connection" structure for current reader */
-
-    SCardConnection_init(test_connection);
-
-    /* Both lists have "+1" valid (initialized) structure */
-
-    database->count += 1;
-
-    /* Get Smart Card Reader name's length */
-
-    name_length = _tcslen(next_reader);
-
-    /* Clone Smart Card Reader name */
-
-    bytesize = sizeof(TCHAR) * (1 + name_length);
-    test_readerstate->szReader = malloc(bytesize);
-    if (NULL == test_readerstate->szReader) { return FALSE; }
-
-    memcpy((LPVOID) test_readerstate->szReader, next_reader, bytesize);
-
-    /* Move to the next entry in a multi-string list */
-
-    next_reader = &(next_reader[1 + name_length]);
-  }
-
-  return TRUE;
-}
-
-/**************************************************************/
-
-enum webcard_fetchreaders_enum
-SCardReaderDB_fetch(
-  _Inout_ SCardReaderDB database,
-  _In_ const SCARDCONTEXT context,
-  _In_ const BOOL firstFetch)
-{
-  enum webcard_fetchreaders_enum fetch_result;
-  LONG result;
-  DWORD bytesize;
-  DWORD test_length;
-  BOOL test_bool;
-
-  LPTSTR reader_names;
-  struct scard_reader_db_t test_database;
-
-  /* Get total length of the multi-string list */
-
-  result = SCardListReaders(
-    context,
-    NULL,
-    NULL,
-    &(test_length));
-
-  if (SCARD_S_SUCCESS != result)
-  {
-    if (SCARD_E_NO_READERS_AVAILABLE == result)
-    {
-      /* Ignore this error, as readers can be plugged-in */
-      /* later while the Native App is still running */
-      test_length = 0;
-    }
-    else
-    {
-      #if defined(_DEBUG)
-      {
-        OSSpecific_writeDebugMessage(
-          "{SCardListReaders} failed: 0x%08X (%s)",
-          (uint32_t) result,
-          WebCard_errorLookup(result));
-      }
-      #endif
-
-      return WEBCARD_FETCHREADERS__FAIL;
-    }
-  }
-
-  /* Are there any Smart Card Readers even available? */
-
-  if (0 == test_length)
-  {
-    if (firstFetch)
-    {
-      /* Signal no errors on the first database look-up */
-      return WEBCARD_FETCHREADERS__IGNORE;
-    }
-
-    if (0 != database->count)
-    {
-      /* Some readers were connected before */
-      SCardReaderDB_destroy(database);
-      SCardReaderDB_init(database);
-
-      return WEBCARD_FETCHREADERS__LESS;
-    }
-
-    /* No readers connected before or after the fetching */
-    return WEBCARD_FETCHREADERS__IGNORE;
-  }
-
-  /* Allocate memory for the multi-string list */
-
-  bytesize = sizeof(TCHAR) * test_length;
-  reader_names = malloc(bytesize);
-  if (NULL == reader_names) { return WEBCARD_FETCHREADERS__FAIL; }
-
-  /* Get Smart Card Reader names */
-
-  result = SCardListReaders(
-    context,
-    NULL,
-    reader_names,
-    &(test_length));
-
-  if (SCARD_S_SUCCESS != result)
-  {
-    free(reader_names);
-    return WEBCARD_FETCHREADERS__FAIL;
-  }
-
-  /* Check if the array should be refreshed */
-
-  if (firstFetch)
-  {
-    test_bool = TRUE;
-    fetch_result = WEBCARD_FETCHREADERS__MORE;
-  }
-  else
-  {
-    test_length = Misc_multiStringList_elementCount(reader_names);
-
-    if (test_length != database->count)
-    {
-      test_bool = TRUE;
-      fetch_result = (test_length > database->count) ?
-        WEBCARD_FETCHREADERS__MORE :
-        WEBCARD_FETCHREADERS__LESS;
-    }
-    else
-    {
-      test_bool = FALSE;
-    }
-  }
-
-  if (!test_bool)
-  {
-    free(reader_names);
-    return WEBCARD_FETCHREADERS__IGNORE;
-  }
-
-  /* Prepare local Smart Card Readers array */
-
-  test_bool = SCardReaderDB_load(&(test_database), reader_names);
-
-  if (NULL != reader_names)
-  {
-    free(reader_names);
-  }
-
-  if (!test_bool)
-  {
-    SCardReaderDB_destroy(&(test_database));
-    return WEBCARD_FETCHREADERS__FAIL;
-  }
-
-  /* Destroy previous Smart Card Readers array */
-
-  SCardReaderDB_destroy(database);
-
-  /* Replace outgoing array with the local array */
-  /* (direct assignment: local destructor should not be called) */
-
-  database[0] = test_database;
-
-  return fetch_result;
-}
-
-/**************************************************************/
-
-BOOL
-WebCard_init(
-  _Out_ SCardReaderDB resultDatabase,
-  _Out_ LPSCARDCONTEXT resultContext)
-{
-  SCardReaderDB_init(resultDatabase);
-
-  resultContext[0] = 0;
-
-  LONG result = SCardEstablishContext(
-    SCARD_SCOPE_USER,
-    NULL,
-    NULL,
-    resultContext);
-
-  if (SCARD_S_SUCCESS != result)
-  {
-    #if defined(_DEBUG)
-    {
-      OSSpecific_writeDebugMessage(
-        "{SCardEstablishContext} failed: 0x%08X (%s)",
-        (uint32_t) result,
-        WebCard_errorLookup(result));
-    }
-    #endif
-
-    return FALSE;
-  }
-
-  enum webcard_fetchreaders_enum fetch_result = SCardReaderDB_fetch(
-      resultDatabase,
-      resultContext[0],
-      TRUE);
-
-  if (WEBCARD_FETCHREADERS__FAIL == fetch_result)
-  {
-    #if defined(_DEBUG)
-    {
-      OSSpecific_writeDebugMessage(
-        "{SCardReaderDB::fetch} failed");
-    }
-    #endif
-
-    return FALSE;
-  }
-
-  return TRUE;
-}
+#include "smart_cards/smart_cards.h"
 
 /**************************************************************/
 
@@ -652,17 +162,105 @@ WebCard_init(
 
 /**************************************************************/
 
-VOID
-WebCard_close(
-  _Inout_ SCardReaderDB database,
-  _In_ const SCARDCONTEXT context)
+BOOL
+WebCard_establishContext(
+  _Out_ LPSCARDCONTEXT resultContext)
 {
-  SCardReaderDB_destroy(database);
+  resultContext[0] = 0;
 
-  if (0 != context)
+  LONG result = SCardEstablishContext(
+    SCARD_SCOPE_USER,
+    NULL,
+    NULL,
+    resultContext);
+
+  if (SCARD_S_SUCCESS != result)
   {
-    SCardReleaseContext(context);
+    #if defined(_DEBUG)
+    {
+      OSSpecific_writeDebugMessage(
+        "{SCardEstablishContext} failed: 0x%08X (%s)",
+        (uint32_t) result,
+        WebCard_errorLookup(result));
+    }
+    #endif
+
+    return FALSE;
   }
+
+  #if defined(_DEBUG)
+  {
+    struct utf8_string_t hexdump;
+    UTF8String_init(&(hexdump));
+    UTF8String_pushBytesAsHex(
+      &(hexdump),
+      sizeof(SCARDCONTEXT),
+      (LPCBYTE) &(resultContext[0]));
+
+    OSSpecific_writeDebugMessage(
+      "{SCardEstablishContext} success: %s",
+      (LPCSTR) hexdump.text);
+
+    UTF8String_destroy(&(hexdump));
+  }
+  #endif
+
+  return TRUE;
+}
+
+/**************************************************************/
+
+BOOL
+WebCard_init(
+  _Out_ SCardReaderDB resultDatabase,
+  _Out_ LPSCARDCONTEXT resultContext)
+{
+  enum webcard_fetchreaders_enum fetch_result;
+  BOOL should_fetch;
+
+  SCardReaderDB_init(resultDatabase);
+
+  if (!WebCard_establishContext(resultContext))
+  {
+    return FALSE;
+  }
+
+  should_fetch = TRUE;
+  while (should_fetch)
+  {
+    should_fetch = FALSE;
+
+    fetch_result = SCardReaderDB_fetch(
+      resultDatabase,
+      NULL,
+      resultContext[0],
+      TRUE);
+
+    if (WEBCARD_FETCHREADERS__FAIL == fetch_result)
+    {
+      #if defined(_DEBUG)
+      {
+        OSSpecific_writeDebugMessage(
+          "{SCardReaderDB::fetch} failed");
+      }
+      #endif
+
+      return FALSE;
+    }
+    else if (WEBCARD_FETCHREADERS__SERVICE_STOPPED == fetch_result)
+    {
+      SCardReleaseContext(resultContext[0]);
+
+      if (!WebCard_establishContext(resultContext))
+      {
+        return FALSE;
+      }
+
+      should_fetch = TRUE;
+    }
+  }
+
+  return TRUE;
 }
 
 /**************************************************************/
@@ -678,20 +276,22 @@ WebCard_run(void)
   struct json_byte_stream_t json_stream;
   struct json_object_t json_request;
   struct json_object_t json_response;
+  struct json_array_t json_reader_names;
 
   clock_t cpu_time_start = clock();
   clock_t cpu_time_end;
   double cpu_time_elapsed;
 
+  BOOL should_fetch;
   BOOL active = WebCard_init(&(database), &(context));
 
   while (active)
   {
     cpu_time_end = clock();
     cpu_time_elapsed =
-      ((double)(cpu_time_end - cpu_time_start)) / CLOCKS_PER_SEC;
+      ((double)(cpu_time_end - cpu_time_start)) / FIXED_CLOCKS_PER_SEC;
 
-    /* Do the fetching every 1.0 second */
+    /* Do the fetching every 1.0 second(s) */
 
     if (cpu_time_elapsed >= 1.0)
     {
@@ -700,51 +300,103 @@ WebCard_run(void)
       /* 1) Fetch list of Smart Card Readers */
       /* (detecting plugging and unplugging) */
 
-      fetch_result = SCardReaderDB_fetch(&(database), context, FALSE);
-
-      if ((WEBCARD_FETCHREADERS__FAIL != fetch_result) &&
-        (WEBCARD_FETCHREADERS__IGNORE != fetch_result))
+      should_fetch = TRUE;
+      while (should_fetch)
       {
-        WebCard_sendReaderEvent(
-          NULL,
-          0,
-          (WEBCARD_FETCHREADERS__MORE == fetch_result) ?
-            WEBCARD_READEREVENT__READERS_MORE :
-            WEBCARD_READEREVENT__READERS_LESS,
-          &(json_response));
+        should_fetch = FALSE;
 
-        JsonObject_destroy(&(json_response));
+        fetch_result = SCardReaderDB_fetch(
+          &(database),
+          &(json_reader_names),
+          context,
+          FALSE);
+
+        if ((WEBCARD_FETCHREADERS__FAIL != fetch_result) &&
+          (WEBCARD_FETCHREADERS__IGNORE != fetch_result))
+        {
+          if (WEBCARD_FETCHREADERS__SERVICE_STOPPED == fetch_result)
+          {
+            SCardReleaseContext(context);
+
+            if (WebCard_establishContext(&(context)))
+            {
+              /* Context re-established (Smart Card Service re-launched), */
+              /* now try fetching the list of readers again! */
+              should_fetch = TRUE;
+            }
+            else
+            {
+              active = FALSE;
+            }
+          }
+          else
+          {
+            WebCard_sendReaderEvent(
+              NULL,
+              0,
+              (WEBCARD_FETCHREADERS__MORE_READERS == fetch_result) ?
+                WEBCARD_READEREVENT__READERS_MORE :
+                WEBCARD_READEREVENT__READERS_LESS,
+              &(json_response),
+              &(json_reader_names));
+
+            JsonObject_destroy(&(json_response));
+          }
+        }
+
+        JsonArray_destroy(&(json_reader_names));
       }
     }
 
-    /* 2) Update Smart Card Reader Status list */
-    /* (detecting existence of smart cards) */
+    /* Smart Card Service Context might be lost */
+    /* when the last reader is unplugged */
 
-    WebCard_handleStatusChange(&(database), context);
-
-    /* 3) Parse commands from Standard Input */
-
-    byte_stream_status = JsonByteStream_loadFromStandardInput(&(json_stream));
-
-    if (JSON_BYTESTREAM_VALID == byte_stream_status)
+    if (active)
     {
-      WebCard_handleRequest(
-        &(json_stream),
-        &(json_request),
-        &(json_response),
-        &(database),
-        context);
+      /* 2) Update Smart Card Reader Status list */
+      /* (detecting existence of smart cards) */
 
-      JsonObject_destroy(&(json_request));
-      JsonObject_destroy(&(json_response));
-    }
-    else if (JSON_BYTESTREAM_NOMORE == byte_stream_status)
-    {
-      active = FALSE;
+      WebCard_handleStatusChange(&(database), context);
+
+      /* 3) Parse commands from Standard Input */
+
+      byte_stream_status = JsonByteStream_loadFromStandardInput(&(json_stream));
+
+      if (JSON_BYTESTREAM_VALID == byte_stream_status)
+      {
+        WebCard_handleRequest(
+          &(json_stream),
+          &(json_request),
+          &(json_response),
+          &(database),
+          context);
+
+        JsonObject_destroy(&(json_request));
+        JsonObject_destroy(&(json_response));
+      }
+      else if (JSON_BYTESTREAM_NOMORE == byte_stream_status)
+      {
+        active = FALSE;
+      }
     }
   }
 
   WebCard_close(&(database), context);
+}
+
+/**************************************************************/
+
+VOID
+WebCard_close(
+  _Inout_ SCardReaderDB database,
+  _In_ const SCARDCONTEXT context)
+{
+  SCardReaderDB_destroy(database);
+
+  if (0 != context)
+  {
+    SCardReleaseContext(context);
+  }
 }
 
 /**************************************************************/
@@ -918,22 +570,17 @@ WebCard_handleRequest(
 /**************************************************************/
 
 BOOL
-WebCard_pushReaderNameToJsonObject(
+WebCard_pushReaderNameToJsonString(
   _In_ SCARD_READERSTATE const * reader,
-  _Inout_ JsonObject jsonObject,
-  _In_ LPCSTR key)
+  _Out_ UTF8String resultReaderName)
 {
   BOOL test_bool;
-  struct json_value_t json_value;
-  struct utf8_string_t utf8_reader_name;
 
   #ifdef _UNICODE
     struct utf16_string_t utf16_reader_name;
   #endif
 
-  /* Copy Smart Card Reader's name into a JSON string */
-
-  UTF8String_init(&(utf8_reader_name));
+  UTF8String_init(resultReaderName);
 
   #ifdef _UNICODE
   {
@@ -948,7 +595,7 @@ WebCard_pushReaderNameToJsonObject(
     {
       test_bool = UTF16String_toUTF8(
         &(utf16_reader_name),
-        &(utf8_reader_name));
+        resultReaderName);
     }
 
     UTF16String_destroy(&(utf16_reader_name));
@@ -956,11 +603,63 @@ WebCard_pushReaderNameToJsonObject(
   #else
   {
     test_bool = UTF8String_pushText(
-      &(utf8_reader_name),
+      resultReaderName,
       reader->szReader,
       0);
   }
   #endif
+
+  return test_bool;
+}
+
+/**************************************************************/
+
+BOOL
+WebCard_pushReaderNameToJsonArray(
+  _In_ SCARD_READERSTATE const * reader,
+  _Inout_ JsonArray jsonArray)
+{
+  BOOL test_bool;
+  struct json_value_t json_value;
+  struct utf8_string_t utf8_reader_name;
+
+  test_bool = WebCard_pushReaderNameToJsonString(
+    reader,
+    &(utf8_reader_name));
+
+  if (!test_bool)
+  {
+    UTF8String_destroy(&(utf8_reader_name));
+    return FALSE;
+  }
+
+  /* Put "Reader Name" at the end of given array */
+
+  json_value.type = JSON_VALUETYPE_STRING;
+  json_value.value = &(utf8_reader_name);
+
+  test_bool = JsonArray_append(jsonArray, &(json_value));
+
+  UTF8String_destroy(&(utf8_reader_name));
+
+  return test_bool;
+}
+
+/**************************************************************/
+
+BOOL
+WebCard_pushReaderNameToJsonObject(
+  _In_ SCARD_READERSTATE const * reader,
+  _Inout_ JsonObject jsonObject,
+  _In_ LPCSTR key)
+{
+  BOOL test_bool;
+  struct json_value_t json_value;
+  struct utf8_string_t utf8_reader_name;
+
+  test_bool = WebCard_pushReaderNameToJsonString(
+    reader,
+    &(utf8_reader_name));
 
   if (!test_bool)
   {
@@ -1413,10 +1112,11 @@ WebCard_transmitAndReceive(
 
 VOID
 WebCard_sendReaderEvent(
-  _In_ SCARD_READERSTATE const * reader,
+  _In_opt_ SCARD_READERSTATE const * reader,
   _In_ const size_t readerIndex,
   _In_ const enum webcard_readerevent_enum readerEvent,
-  _Out_ JsonObject jsonResponse)
+  _Out_ JsonObject jsonResponse,
+  _In_opt_ ConstJsonArray jsonEventDetails)
 {
   BOOL test_bool;
   FLOAT test_float;
@@ -1426,7 +1126,7 @@ WebCard_sendReaderEvent(
   #if defined(_DEBUG)
   {
     OSSpecific_writeDebugMessage(
-      "Sending a ReaderEvent '%d' (ReaderIndex '%d')",
+      "Sending ReaderEvent '%d' (ReaderIndex '%d')",
       readerEvent,
       readerIndex);
   }
@@ -1472,6 +1172,23 @@ WebCard_sendReaderEvent(
         reader,
         jsonResponse,
         "d");
+
+      if (!test_bool) { return; }
+    }
+  }
+  else
+  {
+    if (NULL != jsonEventDetails)
+    {
+      /* Add key "n" (optional reader names) */
+
+      json_value.type = JSON_VALUETYPE_ARRAY;
+      json_value.value = (LPVOID) jsonEventDetails;
+
+      test_bool = JsonObject_appendKeyValue(
+        jsonResponse,
+        "n",
+        &(json_value));
 
       if (!test_bool) { return; }
     }
@@ -1545,7 +1262,8 @@ WebCard_handleStatusChange(
             reader,
             i,
             reader_event,
-            &(json_response));
+            &(json_response),
+            NULL);
 
           JsonObject_destroy(&(json_response));
         }

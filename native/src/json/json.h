@@ -1,14 +1,14 @@
 /**
- * @file "native/src/json.h"
+ * @file "native/src/json/json.h"
  * Definitions and declarations for handling JSON data.
  */
 
 #ifndef H_WEBCARD__JSON
 #define H_WEBCARD__JSON
 
-#include "os_specific.h"
-#include "misc.h"
-#include "utf.h"
+#include "os_specific/os_specific.h"
+#include "misc/misc.h"
+#include "utf/utf.h"
 
 #ifdef __cplusplus
 extern "C" {

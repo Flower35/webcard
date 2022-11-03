@@ -1,5 +1,5 @@
 /**
- * @file "native/src/wtypes_for_unix.h"
+ * @file "native/src/os_specific/wtypes_for_unix.h"
  * List of Windows Data Types.
  * `<stdint.h>` must be included before including this header file.
  */
@@ -43,6 +43,7 @@ typedef WCHAR const * LPCWSTR;
 typedef char TCHAR;
 typedef LPSTR LPTSTR;
 typedef LPCSTR LPCTSTR;
+#define _tcscmp  strcmp
 #define _tcslen  strlen
 
 /** Ignore "SAL" (Microsoft "Source Code Annotation") */
@@ -51,6 +52,7 @@ typedef LPCSTR LPCTSTR;
 #define _Inout_
 #define _In_z_
 #define _In_opt_
+#define _Out_opt_
 #define _Outptr_result_maybenull_
 
 /**************************************************************/

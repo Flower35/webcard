@@ -1,9 +1,9 @@
 /**
- * @file "native/src/misc.c"
+ * @file "native/src/misc/misc.c"
  * Miscellaneous functions.
  */
 
-#include "misc.h"
+#include "misc/misc.h"
 
 /**************************************************************/
 
