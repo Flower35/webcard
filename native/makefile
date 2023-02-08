@@ -41,22 +41,21 @@ ifeq ($(OS),Windows_NT)
 
   ifeq ($(CPU),x86)
     $(info $(MSG_CPU_OK) 32-bit ($(CPU)))
-    C_COMPILER = mingw32-gcc.exe
+    CC = i686-w64-mingw32-gcc.exe
     BINDIR = out/win32
-    EXEC_WEBCARD = $(BINDIR)/webcard.exe
 
   else ifeq ($(CPU),AMD64)
     $(info $(MSG_CPU_OK) 64-bit ($(CPU)))
-    C_COMPILER = x86_64-w64-mingw32-gcc.exe
+    CC = x86_64-w64-mingw32-gcc.exe
     BINDIR = out/win64
-    EXEC_WEBCARD = $(BINDIR)/webcard.exe
 
   else
     $(error $(MSG_CPU_MISMATCH)! ($(CPU)))
   endif
 
+  EXEC_WEBCARD = $(BINDIR)/webcard.exe
   RES_WEBCARD = res\out\webcard.res
-  C_LIBS =  -lwinscard
+  LDFLAGS = -lwinscard
 
 else
   OS = $(shell uname -s)
@@ -67,21 +66,20 @@ else
 
     ifeq ($(CPU),i686)
       $(info $(MSG_CPU_OK) 32-bit ($(CPU)))
-      C_COMPILER = i686-linux-gnu-gcc
+      CC = i686-linux-gnu-gcc
       BINDIR = out/linux32
-      EXEC_WEBCARD = $(BINDIR)/webcard
 
     else ifeq ($(CPU),x86_64)
       $(info $(MSG_CPU_OK) 64-bit ($(CPU)))
-      C_COMPILER = x86_64-linux-gnu-gcc
+      CC = x86_64-linux-gnu-gcc
       BINDIR = out/linux64
-      EXEC_WEBCARD = $(BINDIR)/webcard
 
     else
       $(error $(MSG_CPU_MISMATCH)! ($(CPU)))
     endif
 
-    C_LIBS = -lpcsclite
+    EXEC_WEBCARD = $(BINDIR)/webcard
+    LDFLAGS = -lpcsclite
 
   else ifeq ($(OS),Darwin)
     $(info $(MSG_OS_OK) "macOS")
@@ -89,19 +87,20 @@ else
 
     ifeq ($(CPU),i686)
       $(info $(MSG_CPU_OK) 32-bit ($(CPU)))
+      BINDIR = out/macOS32
 
     else ifeq ($(CPU),x86_64)
       $(info $(MSG_CPU_OK) 64-bit ($(CPU)))
+      BINDIR = out/macOS64
 
     else
       $(error $(MSG_CPU_MISMATCH)! ($(CPU)))
     endif
 
-    C_COMPILER = clang
-    BINDIR = out/macOS
+    CC = clang
     EXEC_WEBCARD = $(BINDIR)/webcard
 
-    C_LIBS = -framework PCSC
+    LDFLAGS = -framework PCSC
 
   else
     $(error $(MSG_OS_MISMATCH)! ($(OS)))
@@ -119,14 +118,12 @@ ifneq ($(COMSPEC),)
   SHELL = $(COMSPEC)
   .SHELLFLAGS = /C
   DOS_BINDIR = $(subst /,\,$(BINDIR))
-  SHELL_BINDIR_CHECK_01 = IF NOT EXIST out\ MD out
-  SHELL_BINDIR_CHECK_02 = IF NOT EXIST $(DOS_BINDIR)\ MD $(DOS_BINDIR)
+  SHELL_BINDIR_CHECK = IF NOT EXIST $(DOS_BINDIR)\ MD $(DOS_BINDIR)
   SHELL_RESDIR_CHECK = IF NOT EXIST res\out\ MD res\out
   SHELL_WHERE = where
   SHELL_DEVNUL = NUL
 else
-  SHELL_BINDIR_CHECK_01 = mkdir -p out
-  SHELL_BINDIR_CHECK_02 = mkdir -p $(BINDIR)
+  SHELL_BINDIR_CHECK = mkdir -p $(BINDIR)
   SHELL_RESDIR_CHECK = mkdir -p res/out
   SHELL_WHERE = which
   SHELL_DEVNUL = /dev/null
@@ -141,40 +138,44 @@ ifdef RES_WEBCARD
   WINDRES = windres
 endif
 
-BUILD_TOOLS = $(WINDRES) $(C_COMPILER)
+BUILD_TOOLS = $(WINDRES) "$(CC)"
 
 $(foreach tool,$(BUILD_TOOLS),\
   $(if $(shell $(SHELL_WHERE) $(tool) 2>$(SHELL_DEVNUL)),\
-    $(info * "$(tool)" found.),\
-    $(error * "$(tool)" not in PATH! Please refer to "README.MD")))
+    ,\
+    $(error * $(tool) not in PATH! Please refer to "README.MD")))
 
 ################################################################
 # Header files are scanned starting from the "./src" directory
 
-C_FLAGS = -I./src
+CPPFLAGS = -I./src
+
+CFLAGS = -Wall -pedantic-errors
 
 ################################################################
 # Recipes for specific targets.
-# Selecting "C Compiler flags" depending on the target:
-#  "release" (default) or "debug".
+# Selecting "Compiler flags" and "Linker flags"
+#  depending on the target: "release" (default) or "debug".
 
 .PHONY: release debug
 
-release: C_FLAGS += -O3 -s -Wall -pedantic-errors
+release: CFLAGS += -O3
+release: LDFLAGS += -s
 release: $(EXEC_WEBCARD)
 
-debug: C_FLAGS += -g -Wall -pedantic-errors -D_DEBUG
+debug: CPPFLAGS += -D_DEBUG
+debug: CFLAGS += -g
+debug: LDFLAGS += -g
 debug: $(EXEC_WEBCARD)
 
 $(EXEC_WEBCARD): $(WEBCARD_HEADERS) $(WEBCARD_SOURCES) $(RES_WEBCARD)
 	$(info )
-	$(SHELL_BINDIR_CHECK_01)
-	$(SHELL_BINDIR_CHECK_02)
-	$(C_COMPILER) $(C_FLAGS) -o $@ $(WEBCARD_SOURCES) $(RES_WEBCARD) $(C_LIBS)
+	@$(SHELL_BINDIR_CHECK)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(WEBCARD_SOURCES) $(RES_WEBCARD) $(LDFLAGS)
 
 $(RES_WEBCARD): res/webcard.rc res/webcard.ico
 	$(info )
-	$(SHELL_RESDIR_CHECK)
+	@$(SHELL_RESDIR_CHECK)
 	$(WINDRES) res/webcard.rc -O coff $(RES_WEBCARD)
 
 ################################################################
