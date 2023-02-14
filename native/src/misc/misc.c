@@ -54,7 +54,7 @@ Misc_nextPowerOfTwo(
 BOOL
 Misc_pushToLocalBuffer(
   _In_ const LPCSTR bufferStart,
-  _Inout_ LPSTR * bufferEndRef,
+  _Inout_ LPSTR *bufferEndRef,
   _In_ const size_t size,
   _In_ const char character)
 {

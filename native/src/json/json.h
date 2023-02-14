@@ -22,35 +22,26 @@ extern "C" {
 /**
  * Possible return values for `JsonByteStream_loadFromStandardInput` function.
  */
-enum json_byte_stream_enum
-{
+
   /** Bytes successfully loaded from STDIN stream. */
-  JSON_BYTESTREAM_VALID,
+  #define JSON_STREAM_STATUS__VALID   0
 
   /** No data available on STDIN stream. */
-  JSON_BYTESTREAM_EMPTY,
+  #define JSON_STREAM_STATUS__EMPTY   1
 
   /** No more bytes, loading error, memory alocation error. */
-  JSON_BYTESTREAM_NOMORE
-};
+  #define JSON_STREAM_STATUS__NO_MORE  2
 
 /**
- * `JsonByteStream` is a reference to any
- * `json_byte_stream_t` structure.
+ * `JsonByteStream` type definition.
  */
-typedef struct json_byte_stream_t * JsonByteStream;
-
-/**
- * `ConstJsonByteStream` is a reference to a CONSTANT
- * `json_byte_stream_t` structure.
- */
-typedef struct json_byte_stream_t const * ConstJsonByteStream;
+typedef struct JsonByteStream JsonByteStream;
 
 /**
  * A stream of bytes (UTF-8 encoding), which are expected to
  * represent a valid stringified JSON.
  */
-struct json_byte_stream_t
+struct JsonByteStream
 {
   /** Number of bytes present in the stream */
   size_t head_length;
@@ -71,12 +62,12 @@ struct json_byte_stream_t
  * Checks if there is any data incoming on Standard Input. If so, attempts
  * to read the STDIN contents and store them for further processing.
  * @param[out] stream Reference to an UNINITIALIZED `JsonByteStream` object.
- * @return `JSON_BYTESTREAM_VALID` if the stream is allocated and ready,
+ * @return `JSON_STREAM_STATUS__VALID` if the stream is allocated and ready,
  * otherwise the object is left uninitialized.
  */
-extern enum json_byte_stream_enum
+int
 JsonByteStream_loadFromStandardInput(
-  _Out_ JsonByteStream stream);
+  _Out_ JsonByteStream *stream);
 
 /**
  * @brief `JsonByteStream` destructor.
@@ -85,7 +76,7 @@ JsonByteStream_loadFromStandardInput(
  */
 extern VOID
 JsonByteStream_destroy(
-  _Inout_ JsonByteStream stream);
+  _Inout_ JsonByteStream *stream);
 
 /**
  * @brief Peeks next byte without removing it from the stream.
@@ -96,8 +87,8 @@ JsonByteStream_destroy(
  */
 extern BOOL
 JsonByteStream_peek(
-  _In_ ConstJsonByteStream stream,
-  _Out_ LPBYTE byteRef);
+  _In_ const JsonByteStream *stream,
+  _Out_ BYTE *byteRef);
 
 /**
  * @brief Removes (advances forward) `n` bytes from the stream.
@@ -107,7 +98,7 @@ JsonByteStream_peek(
  */
 extern VOID
 JsonByteStream_skip(
-  _Inout_ JsonByteStream stream,
+  _Inout_ JsonByteStream *stream,
   _In_ const size_t count);
 
 /**
@@ -121,8 +112,8 @@ JsonByteStream_skip(
  */
 extern BOOL
 JsonByteStream_read(
-  _Inout_ JsonByteStream stream,
-  _Out_ LPBYTE output,
+  _Inout_ JsonByteStream *stream,
+  _Out_ BYTE *output,
   _In_ const size_t count);
 
 /**
@@ -138,7 +129,7 @@ JsonByteStream_read(
  */
 extern BOOL
 JsonByteStream_skipWhitespace(
-  _Inout_ JsonByteStream stream);
+  _Inout_ JsonByteStream *stream);
 
 
 /**************************************************************/
@@ -167,9 +158,9 @@ JsonByteStream_skipWhitespace(
  */
 extern BOOL
 JsonString_parse(
-  _Outptr_result_maybenull_ UTF8String * const result,
+  _Outptr_result_maybenull_ UTF8String **const result,
   _In_ const BOOL allocate,
-  _Inout_ JsonByteStream stream);
+  _Inout_ JsonByteStream *stream);
 
 /**
  * @brief Saves `UTS8String` object to it's UTF-8
@@ -183,8 +174,8 @@ JsonString_parse(
  */
 extern BOOL
 JsonString_toString(
-  _In_ ConstUTF8String string,
-  _Inout_ UTF8String output);
+  _In_ const UTF8String *string,
+  _Inout_ UTF8String *output);
 
 
 /**************************************************************/
@@ -194,41 +185,32 @@ JsonString_toString(
 /**
  * All possible "JSON Value" types.
  */
-enum json_value_enum
-{
-  JSON_VALUETYPE_STRING,
-  JSON_VALUETYPE_NUMBER,
-  JSON_VALUETYPE_OBJECT,
-  JSON_VALUETYPE_ARRAY,
-  JSON_VALUETYPE_TRUE,
-  JSON_VALUETYPE_FALSE,
-  JSON_VALUETYPE_NULL
-};
+
+  #define JSON_VALUE_TYPE__NULL    0
+  #define JSON_VALUE_TYPE__STRING  1
+  #define JSON_VALUE_TYPE__NUMBER  2
+  #define JSON_VALUE_TYPE__FALSE   3
+  #define JSON_VALUE_TYPE__TRUE    4
+  #define JSON_VALUE_TYPE__ARRAY   5
+  #define JSON_VALUE_TYPE__OBJECT  6
 
 /**
- * `JsonValue` is a reference to any
- * `json_value_t` structure.
+ * `JsonValue` type definition.
  */
-typedef struct json_value_t * JsonValue;
-
-/**
- * `ConstJsonValue` is a reference to a CONSTANT
- * `json_value_t` structure.
- */
-typedef struct json_value_t const * ConstJsonValue;
+typedef struct JsonValue JsonValue;
 
 /**
  * Represents a dynamically-allocated JSON Value (unnamed JSON Object,
  * unnamed JSON Array, unnamed JSON String, unnamed JSON Number,
  * unnamed JSON Boolean).
  */
-struct json_value_t
+struct JsonValue
 {
   /** Type of this value (determines which functions to use). */
-  enum json_value_enum type;
+  int type;
 
   /** Pointer to some data block (depends on the type). */
-  LPVOID value;
+  void *value;
 };
 
 /**
@@ -238,7 +220,7 @@ struct json_value_t
  */
 extern VOID
 JsonValue_init(
-  _Out_ JsonValue value);
+  _Out_ JsonValue *value);
 
 /**
  * @brief `JsonValue` destructor.
@@ -249,7 +231,7 @@ JsonValue_init(
  */
 extern VOID
 JsonValue_destroy(
-  _Inout_ JsonValue value);
+  _Inout_ JsonValue *value);
 
 /**
  * @brief Creates a deep-copy (independent memory allocation)
@@ -267,8 +249,8 @@ JsonValue_destroy(
  */
 extern BOOL
 JsonValue_copy(
-  _Out_ JsonValue destination,
-  _In_ ConstJsonValue source);
+  _Out_ JsonValue *destination,
+  _In_ const JsonValue *source);
 
 /**
  * @brief Loads JSON Number by parsing it's stringified representation.
@@ -289,8 +271,8 @@ JsonValue_copy(
  */
 extern BOOL
 JsonValue_parseNumber(
-  _Inout_ JsonValue value,
-  _Inout_ JsonByteStream stream);
+  _Inout_ JsonValue *value,
+  _Inout_ JsonByteStream *stream);
 
 /**
  * @brief Loads `JsonValue` object by parsing it's UTF-8
@@ -315,9 +297,9 @@ JsonValue_parseNumber(
  */
 extern BOOL
 JsonValue_parse(
-  _Outptr_result_maybenull_ JsonValue * const result,
+  _Outptr_result_maybenull_ JsonValue **const result,
   _In_ const BOOL allocate,
-  _Inout_ JsonByteStream stream);
+  _Inout_ JsonByteStream *stream);
 
 /**
  * @brief Saves `JsonValue` object to it's UTF-8
@@ -331,8 +313,8 @@ JsonValue_parse(
  */
 extern BOOL
 JsonValue_toString(
-  _In_ ConstJsonValue value,
-  _Inout_ UTF8String output);
+  _In_ const JsonValue *value,
+  _Inout_ UTF8String *output);
 
 
 /**************************************************************/
@@ -340,33 +322,26 @@ JsonValue_toString(
 /**************************************************************/
 
 /**
- * `JsonArray` is a reference to any
- * `json_array_t` structure.
+ * `JsonArray` type definition.
  */
-typedef struct json_array_t * JsonArray;
-
-/**
- * `ConstJsonArray` is a reference to a CONSTANT
- * `json_array_t` structure.
- */
-typedef struct json_array_t const * ConstJsonArray;
+typedef struct JsonArray JsonArray;
 
 /**
  * JSON Array represents an array of ordered JSON Values.
  */
-struct json_array_t
+struct JsonArray
 {
-  /** Number of valid elements (`json_value_t` structures). */
+  /** Number of valid elements (`JsonValue` structures). */
   size_t count;
 
-  /** Total number of allocated elements (`json_value_t` structures). */
+  /** Total number of allocated elements (`JsonValue` structures). */
   size_t capacity;
 
   /**
    * Contiguous (dynamically allocated) memory block of
-   * `json_value_t` structures.
+   * `JsonValue` structures.
    */
-  JsonValue values;
+  JsonValue *values;
 };
 
 /**
@@ -376,7 +351,7 @@ struct json_array_t
  */
 extern VOID
 JsonArray_init(
-  _Out_ JsonArray array);
+  _Out_ JsonArray *array);
 
 /**
  * @brief `JsonArray` destructor.
@@ -387,7 +362,7 @@ JsonArray_init(
  */
 extern VOID
 JsonArray_destroy(
-  _Inout_ JsonArray array);
+  _Inout_ JsonArray *array);
 
 /**
  * @brief Creates a deep-copy (independent memory allocations)
@@ -405,8 +380,8 @@ JsonArray_destroy(
  */
 extern BOOL
 JsonArray_copy(
-  _Out_ JsonArray destination,
-  _In_ ConstJsonArray source);
+  _Out_ JsonArray *destination,
+  _In_ const JsonArray *source);
 
 /**
  * @brief Appends `JsonValue` to `JsonArray` by performing a deep-copy.
@@ -420,8 +395,8 @@ JsonArray_copy(
  */
 extern BOOL
 JsonArray_append(
-  _Inout_ JsonArray array,
-  _In_ ConstJsonValue value);
+  _Inout_ JsonArray *array,
+  _In_ const JsonValue *value);
 
 /**
  * @brief Loads `JsonArray` object by parsing it's UTF-8
@@ -446,8 +421,8 @@ JsonArray_append(
  */
 extern BOOL
 JsonArray_parse(
-  _Outptr_result_maybenull_ JsonArray * const result,
-  _Inout_ JsonByteStream stream);
+  _Outptr_result_maybenull_ JsonArray **const result,
+  _Inout_ JsonByteStream *stream);
 
 /**
  * @brief Saves `JsonArray` object to it's UTF-8
@@ -461,8 +436,8 @@ JsonArray_parse(
  */
 extern BOOL
 JsonArray_toString(
-  _In_ ConstJsonArray array,
-  _Inout_ UTF8String output);
+  _In_ const JsonArray *array,
+  _Inout_ UTF8String *output);
 
 
 /**************************************************************/
@@ -470,28 +445,21 @@ JsonArray_toString(
 /**************************************************************/
 
 /**
- * `JsonPair` is a reference to any
- * `json_pair_t` structure.
+ * `JsonPair` type definition.
  */
-typedef struct json_pair_t * JsonPair;
-
-/**
- * `ConstJsonPair` is a reference to a CONSTANT
- * `json_pair_t` structure.
- */
-typedef struct json_pair_t const * ConstJsonPair;
+typedef struct JsonPair JsonPair;
 
 /**
  * Represents a dynamically-allocated Key-Value Pair
  * (JSON String with a JSON Value).
  */
-struct json_pair_t
+struct JsonPair
 {
   /** Key (pair identifier, should be unique within a single JSON Object). */
-  struct utf8_string_t key;
+  UTF8String key;
 
   /** Value (what the key points to). */
-  struct json_value_t value;
+  JsonValue value;
 };
 
 /**
@@ -501,7 +469,7 @@ struct json_pair_t
  */
 extern VOID
 JsonPair_init(
-  _Out_ JsonPair pair);
+  _Out_ JsonPair *pair);
 
 /**
  * @brief `JsonPair` destructor.
@@ -512,7 +480,7 @@ JsonPair_init(
  */
 extern VOID
 JsonPair_destroy(
-  _Inout_ JsonPair pair);
+  _Inout_ JsonPair *pair);
 
 /**
  * @brief Creates a deep-copy (independent memory allocation)
@@ -530,8 +498,8 @@ JsonPair_destroy(
  */
 extern BOOL
 JsonPair_copy(
-  _Out_ JsonPair destination,
-  _In_ ConstJsonPair source);
+  _Out_ JsonPair *destination,
+  _In_ const JsonPair *source);
 
 /**
  * @brief Loads `JsonPair` object by parsing it's UTF-8
@@ -556,9 +524,9 @@ JsonPair_copy(
  */
 extern BOOL
 JsonPair_parse(
-  _Outptr_result_maybenull_ JsonPair * const result,
+  _Outptr_result_maybenull_ JsonPair **const result,
   _In_ const BOOL allocate,
-  _Inout_ JsonByteStream stream);
+  _Inout_ JsonByteStream *stream);
 
 /**
  * @brief Saves `JsonPair` object to it's UTF-8
@@ -572,8 +540,8 @@ JsonPair_parse(
  */
 extern BOOL
 JsonPair_toString(
-  _In_ ConstJsonPair pair,
-  _Inout_ UTF8String output);
+  _In_ const JsonPair *pair,
+  _Inout_ UTF8String *output);
 
 
 /**************************************************************/
@@ -581,34 +549,27 @@ JsonPair_toString(
 /**************************************************************/
 
 /**
- * `JsonObject` is a reference to any
- * `json_object_t` structure.
+ * `JsonObject` type definition.
  */
-typedef struct json_object_t * JsonObject;
-
-/**
- * `ConstJsonObject` is a reference to a CONSTANT
- * `json_object_t` structure.
- */
-typedef struct json_object_t const * ConstJsonObject;
+typedef struct JsonObject JsonObject;
 
 /**
  * JSON Object represents an object which contains
  * unordered JSON Key-Value pairs.
  */
-struct json_object_t
+struct JsonObject
 {
-  /** Number of valid elements (`json_pair_t` structures). */
+  /** Number of valid elements (`JsonPair` structures). */
   size_t count;
 
-  /** Total number of allocated elements (`json_pair_t` structures). */
+  /** Total number of allocated elements (`JsonPair` structures). */
   size_t capacity;
 
   /**
    * Contiguous (dynamically allocated) memory block of
-   * `json_pair_t` structures.
+   * `JsonPair` structures.
    */
-  JsonPair pairs;
+  JsonPair *pairs;
 };
 
 /**
@@ -618,7 +579,7 @@ struct json_object_t
  */
 extern VOID
 JsonObject_init(
-  _Out_ JsonObject object);
+  _Out_ JsonObject *object);
 
 /**
  * @brief `JsonObject` destructor.
@@ -629,7 +590,7 @@ JsonObject_init(
  */
 extern VOID
 JsonObject_destroy(
-  _Inout_ JsonObject object);
+  _Inout_ JsonObject *object);
 
 /**
  * @brief Creates a deep-copy (independent memory allocation)
@@ -647,8 +608,8 @@ JsonObject_destroy(
  */
 extern BOOL
 JsonObject_copy(
-  _Out_ JsonObject destination,
-  _In_ ConstJsonObject source);
+  _Out_ JsonObject *destination,
+  _In_ const JsonObject *source);
 
 /**
  * @brief Appends `JsonPair` to `JsonObject` by performing a deep-copy.
@@ -662,8 +623,8 @@ JsonObject_copy(
  */
 extern BOOL
 JsonObject_appendPair(
-  _Inout_ JsonObject object,
-  _In_ ConstJsonPair pair);
+  _Inout_ JsonObject *object,
+  _In_ const JsonPair *pair);
 
 /**
  * @brief Appends a Key-Value pair to `JsonObject` by performing a deep-copy.
@@ -680,9 +641,9 @@ JsonObject_appendPair(
  */
 extern BOOL
 JsonObject_appendKeyValue(
-  _Inout_ JsonObject object,
+  _Inout_ JsonObject *object,
   _In_ LPCSTR key,
-  _In_ ConstJsonValue value);
+  _In_ const JsonValue *value);
 
 /**
  * @brief Loads `JsonObject` object by parsing it's UTF-8
@@ -707,9 +668,9 @@ JsonObject_appendKeyValue(
  */
 extern BOOL
 JsonObject_parse(
-  _Outptr_result_maybenull_ JsonObject * const result,
+  _Outptr_result_maybenull_ JsonObject **const result,
   _In_ const BOOL allocate,
-  _Inout_ JsonByteStream stream);
+  _Inout_ JsonByteStream *stream);
 
 /**
  * @brief Saves `JsonObject` object to it's UTF-8
@@ -723,8 +684,8 @@ JsonObject_parse(
  */
 extern BOOL
 JsonObject_toString(
-  _In_ ConstJsonObject object,
-  _Inout_ UTF8String output);
+  _In_ const JsonObject *object,
+  _Inout_ UTF8String *output);
 
 /**
  * Searches for a value tied with a given key in given JSON Object.
@@ -742,8 +703,8 @@ JsonObject_toString(
  */
 extern BOOL
 JsonObject_getValue(
-  _In_ ConstJsonObject object,
-  _Out_ JsonValue result,
+  _In_ const JsonObject *object,
+  _Out_ JsonValue *result,
   _In_ LPCSTR key);
 
 

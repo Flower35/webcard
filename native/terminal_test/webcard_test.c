@@ -56,7 +56,7 @@ nibble_to_char(const uint8_t code)
 /**************************************************************/
 
 void
-write_debug_text(char const * text)
+write_debug_text(const char *text)
 {
   write(STDERR_FILENO, text, strlen(text));
 }
@@ -64,7 +64,7 @@ write_debug_text(char const * text)
 /**************************************************************/
 
 void
-write_debug_utf8(char const * text, uint32_t length)
+write_debug_utf8(const char *text, uint32_t length)
 {
   char escaped[4] = {'\\'};
 
@@ -94,7 +94,7 @@ write_debug_utf8(char const * text, uint32_t length)
 /**************************************************************/
 
 BOOL
-pipe_send(const char * name, int fd_write, char const * utf8_text, uint32_t length)
+pipe_send(const char *name, int fd_write, const char *utf8_text, uint32_t length)
 {
   write_debug_text(" @ ");
   write_debug_text(name);
@@ -124,7 +124,7 @@ pipe_send(const char * name, int fd_write, char const * utf8_text, uint32_t leng
 /**************************************************************/
 
 BOOL
-pipe_recv(const char * name, int fd_read, char utf8_buf[BUF_LENGTH])
+pipe_recv(const char *name, int fd_read, char utf8_buf[BUF_LENGTH])
 {
   uint32_t length;
   BOOL repeat;

@@ -7,9 +7,9 @@
 
 /**************************************************************/
 
-enum json_byte_stream_enum
+int
 JsonByteStream_loadFromStandardInput(
-  _Out_ JsonByteStream stream)
+  _Out_ JsonByteStream *stream)
 {
   BOOL test_bool;
   os_specific_stream_t stdin_stream;
@@ -24,7 +24,7 @@ JsonByteStream_loadFromStandardInput(
 
     if (INVALID_HANDLE_VALUE == stdin_stream)
     {
-      return JSON_BYTESTREAM_NOMORE;
+      return JSON_STREAM_STATUS__NO_MORE;
     }
   }
   #elif defined(__linux__) || defined(__APPLE__)
@@ -42,13 +42,13 @@ JsonByteStream_loadFromStandardInput(
 
   if (!test_bool)
   {
-    return JSON_BYTESTREAM_NOMORE;
+    return JSON_STREAM_STATUS__NO_MORE;
   }
 
   if (0 == pipe_length)
   {
     /* Go back to the program's main loop */
-    return JSON_BYTESTREAM_EMPTY;
+    return JSON_STREAM_STATUS__EMPTY;
   }
 
   /* At least one byte available: in theory this could stop the thread, but */
@@ -64,7 +64,7 @@ JsonByteStream_loadFromStandardInput(
 
   if (!test_bool)
   {
-    return JSON_BYTESTREAM_NOMORE;
+    return JSON_STREAM_STATUS__NO_MORE;
   }
 
   #if defined(_DEBUG)
@@ -73,7 +73,7 @@ JsonByteStream_loadFromStandardInput(
 
   /* Validate given text length */
 
-  test_bool = ((pipe_length - sizeof(uint32_t)) == json_length);
+  test_bool = (json_length <= (pipe_length - sizeof(uint32_t)));
 
   if ((0 == json_length) || (UINT32_MAX == json_length) || (!test_bool))
   {
@@ -81,20 +81,24 @@ JsonByteStream_loadFromStandardInput(
     {
       /* In rare cases, only 4 bytes (JSON size info) were streamed first */
 
-      test_bool = OSSpecific_peekStream(
-        stdin_stream,
-        &(pipe_length));
-
-      if (!test_bool)
+      do
       {
-        return JSON_BYTESTREAM_NOMORE;
+        test_bool = OSSpecific_peekStream(
+          stdin_stream,
+          &(pipe_length));
+
+        if (!test_bool)
+        {
+          return JSON_STREAM_STATUS__NO_MORE;
+        }
       }
+      while (0 == pipe_length);
 
       #if defined(_DEBUG)
         OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} 0x%04X bytes on STDIN", pipe_length);
       #endif
 
-      test_bool = (pipe_length == json_length);
+      test_bool = (json_length <= pipe_length);
     }
 
     if (!test_bool)
@@ -103,7 +107,7 @@ JsonByteStream_loadFromStandardInput(
         OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} invalid stream length!");
       #endif
 
-      return JSON_BYTESTREAM_NOMORE;
+      return JSON_STREAM_STATUS__NO_MORE;
     }
   }
 
@@ -116,7 +120,7 @@ JsonByteStream_loadFromStandardInput(
       OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} memory allocation failed!");
     #endif
 
-    return JSON_BYTESTREAM_NOMORE;
+    return JSON_STREAM_STATUS__NO_MORE;
   }
 
   stream->head_length = json_length;
@@ -131,11 +135,11 @@ JsonByteStream_loadFromStandardInput(
   if (!test_bool)
   {
     free(stream->head);
-    return JSON_BYTESTREAM_NOMORE;
+    return JSON_STREAM_STATUS__NO_MORE;
   }
 
   #if defined(_DEBUG)
-    struct utf8_string_t hexdump;
+    UTF8String hexdump;
     UTF8String_init(&(hexdump));
     UTF8String_pushBytesAsHex(&(hexdump), json_length, stream->head);
     OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} hex-dump: %s", (LPCSTR) hexdump.text);
@@ -147,14 +151,14 @@ JsonByteStream_loadFromStandardInput(
   stream->tail = stream->head;
   stream->tail_length = json_length;
 
-  return JSON_BYTESTREAM_VALID;
+  return JSON_STREAM_STATUS__VALID;
 }
 
 /**************************************************************/
 
 VOID
 JsonByteStream_destroy(
-  _Inout_ JsonByteStream stream)
+  _Inout_ JsonByteStream *stream)
 {
   if (NULL != stream->head)
   {
@@ -167,8 +171,8 @@ JsonByteStream_destroy(
 
 BOOL
 JsonByteStream_peek(
-  _In_ ConstJsonByteStream stream,
-  _Out_ LPBYTE byte)
+  _In_ const JsonByteStream *stream,
+  _Out_ BYTE *byte)
 {
   if (stream->tail_length > 0)
   {
@@ -188,7 +192,7 @@ JsonByteStream_peek(
 
 VOID
 JsonByteStream_skip(
-  _Inout_ JsonByteStream stream,
+  _Inout_ JsonByteStream *stream,
   _In_ const size_t count)
 {
   stream->tail += count;
@@ -199,8 +203,8 @@ JsonByteStream_skip(
 
 BOOL
 JsonByteStream_read(
-  _Inout_ JsonByteStream stream,
-  _Out_ LPBYTE output,
+  _Inout_ JsonByteStream *stream,
+  _Out_ BYTE *output,
   _In_ const size_t count)
 {
   if (stream->tail_length < count)
@@ -222,7 +226,7 @@ JsonByteStream_read(
 
 BOOL
 JsonByteStream_skipWhitespace(
-  _Inout_ JsonByteStream stream)
+  _Inout_ JsonByteStream *stream)
 {
   BYTE test_byte;
 

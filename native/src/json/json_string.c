@@ -9,16 +9,16 @@
 
 BOOL
 JsonString_parse(
-  _Outptr_result_maybenull_ UTF8String * const result,
+  _Outptr_result_maybenull_ UTF8String **const result,
   _In_ const BOOL allocate,
-  _Inout_ JsonByteStream stream)
+  _Inout_ JsonByteStream *stream)
 {
   BYTE test_byte;
   BOOL test_bool;
 
   if (allocate)
   {
-    result[0] = malloc(sizeof(struct utf8_string_t));
+    result[0] = malloc(sizeof(UTF8String));
     if (NULL == result[0]) { return FALSE; }
   }
   UTF8String_init(result[0]);
@@ -136,8 +136,8 @@ JsonString_parse(
 
 BOOL
 JsonString_toString(
-  _In_ ConstUTF8String string,
-  _Inout_ UTF8String output)
+  _In_ const UTF8String *string,
+  _Inout_ UTF8String *output)
 {
   BYTE test_bytes[2] = { 0x00 };
   BOOL test_bool;

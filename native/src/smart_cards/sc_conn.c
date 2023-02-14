@@ -9,7 +9,7 @@
 
 VOID
 SCardConnection_init(
-  _Out_ SCardConnection connection)
+  _Out_ SCardConnection *connection)
 {
   connection->handle         = 0;
   connection->activeProtocol = 0;
@@ -20,7 +20,7 @@ SCardConnection_init(
 
 BOOL
 SCardConnection_open(
-  _Inout_ SCardConnection connection,
+  _Inout_ SCardConnection *connection,
   _In_ const SCARDCONTEXT context,
   _In_ LPCTSTR readerName,
   _In_ const DWORD shareMode)
@@ -61,7 +61,7 @@ SCardConnection_open(
 
 BOOL
 SCardConnection_close(
-  _Inout_ SCardConnection connection)
+  _Inout_ SCardConnection *connection)
 {
   if (0 == connection->handle)
   {
@@ -81,11 +81,11 @@ SCardConnection_close(
 
 BOOL
 SCardConnection_transceiveSingle(
-  _In_ ConstSCardConnection connection,
-  _In_ LPCBYTE input,
+  _In_ const SCardConnection *connection,
+  _In_ const BYTE *input,
   _In_ const DWORD inputLength,
-  _Out_ LPBYTE output,
-  _Inout_ LPDWORD outputLengthPointer)
+  _Out_ BYTE *output,
+  _Inout_ DWORD *outputLengthRef)
 {
   LONG result = SCardTransmit(
     connection->handle,
@@ -96,7 +96,7 @@ SCardConnection_transceiveSingle(
     inputLength,
     NULL,
     output,
-    outputLengthPointer);
+    outputLengthRef);
 
   if (SCARD_S_SUCCESS != result)
   {
@@ -119,16 +119,16 @@ SCardConnection_transceiveSingle(
 
 BOOL
 SCardConnection_transceiveMultiple(
-  _In_ ConstSCardConnection connection,
-  _Inout_ UTF8String hexStringResult,
-  _In_ LPCBYTE input,
+  _In_ const SCardConnection *connection,
+  _Inout_ UTF8String *hexStringResult,
+  _In_ const BYTE *input,
   _In_ const DWORD inputLength,
   _Out_ LPBYTE output,
   _In_ const DWORD outputLength)
 {
   BOOL test_bool;
   DWORD bytesReceived = outputLength;
-  LPDWORD bytesReceivedPointer = &(bytesReceived);
+  DWORD *bytesReceivedRef = &(bytesReceived);
   BYTE getResponseApdu[5] = {0x00, 0xC0, 0x00, 0x00};
 
   test_bool = SCardConnection_transceiveSingle(
@@ -136,7 +136,7 @@ SCardConnection_transceiveMultiple(
     input,
     inputLength,
     output,
-    bytesReceivedPointer);
+    bytesReceivedRef);
 
   if (!test_bool) { return FALSE; }
 
@@ -164,7 +164,7 @@ SCardConnection_transceiveMultiple(
       getResponseApdu,
       5,
       output,
-      bytesReceivedPointer);
+      bytesReceivedRef);
 
     if (!test_bool) { return FALSE; }
   }

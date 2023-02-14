@@ -9,7 +9,7 @@
 
 VOID
 JsonObject_init(
-  _Out_ JsonObject object)
+  _Out_ JsonObject *object)
 {
   object->count    = 0;
   object->capacity = 0;
@@ -20,7 +20,7 @@ JsonObject_init(
 
 VOID
 JsonObject_destroy(
-  _Inout_ JsonObject object)
+  _Inout_ JsonObject *object)
 {
   if (NULL != object->pairs)
   {
@@ -37,8 +37,8 @@ JsonObject_destroy(
 
 BOOL
 JsonObject_copy(
-  _Out_ JsonObject destination,
-  _In_ ConstJsonObject source)
+  _Out_ JsonObject *destination,
+  _In_ const JsonObject *source)
 {
   if (0 == source->count)
   {
@@ -47,7 +47,7 @@ JsonObject_copy(
   }
 
   const size_t capacity = Misc_nextPowerOfTwo(source->count - 1);
-  const size_t bytesize = sizeof(struct json_pair_t) * capacity;
+  const size_t bytesize = sizeof(JsonPair) * capacity;
 
   destination->count = 0;
   destination->capacity = capacity;
@@ -69,8 +69,8 @@ JsonObject_copy(
 
 BOOL
 JsonObject_appendPair(
-  _Inout_ JsonObject object,
-  _In_ ConstJsonPair pair)
+  _Inout_ JsonObject *object,
+  _In_ const JsonPair *pair)
 {
   size_t new_capacity = (object->count + 1);
 
@@ -78,8 +78,8 @@ JsonObject_appendPair(
   {
     new_capacity = Misc_nextPowerOfTwo(new_capacity - 1);
 
-    const size_t new_bytesize = sizeof(struct json_pair_t) * new_capacity;
-    JsonPair new_pairs = realloc(object->pairs, new_bytesize);
+    const size_t new_bytesize = sizeof(JsonPair) * new_capacity;
+    JsonPair *new_pairs = realloc(object->pairs, new_bytesize);
     if (NULL == new_pairs) { return FALSE; }
 
     object->pairs = new_pairs;
@@ -98,11 +98,11 @@ JsonObject_appendPair(
 
 BOOL
 JsonObject_appendKeyValue(
-  _Inout_ JsonObject object,
+  _Inout_ JsonObject *object,
   _In_ LPCSTR key,
-  _In_ ConstJsonValue value)
+  _In_ const JsonValue *value)
 {
-  struct json_pair_t json_pair;
+  JsonPair json_pair;
 
   UTF8String_makeTemporary(&(json_pair.key), key);
 
@@ -115,18 +115,18 @@ JsonObject_appendKeyValue(
 
 BOOL
 JsonObject_parse(
-  _Outptr_result_maybenull_ JsonObject * const result,
+  _Outptr_result_maybenull_ JsonObject **const result,
   _In_ BOOL allocate,
-  _Inout_ JsonByteStream stream)
+  _Inout_ JsonByteStream *stream)
 {
   BOOL test_bool;
   BYTE test_byte;
-  struct json_pair_t json_pair;
-  JsonPair json_pair_ptr = &(json_pair);
+  JsonPair json_pair;
+  JsonPair *json_pair_ptr = &(json_pair);
 
   if (allocate)
   {
-    result[0] = malloc(sizeof(struct json_object_t));
+    result[0] = malloc(sizeof(JsonObject));
     if (NULL == result[0]) { return FALSE; }
   }
   JsonObject_init(result[0]);
@@ -205,8 +205,8 @@ JsonObject_parse(
 
 BOOL
 JsonObject_toString(
-  _In_ ConstJsonObject object,
-  _Inout_ UTF8String output)
+  _In_ const JsonObject *object,
+  _Inout_ UTF8String *output)
 {
   if (!UTF8String_pushByte(output, '{'))
   {
@@ -236,8 +236,8 @@ JsonObject_toString(
 
 BOOL
 JsonObject_getValue(
-  _In_ ConstJsonObject object,
-  _Out_ JsonValue result,
+  _In_ const JsonObject *object,
+  _Out_ JsonValue *result,
   _In_ LPCSTR key)
 {
   for (size_t i = 0; i < object->count; i++)

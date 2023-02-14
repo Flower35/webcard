@@ -190,12 +190,12 @@ WebCard_establishContext(
 
   #if defined(_DEBUG)
   {
-    struct utf8_string_t hexdump;
+    UTF8String hexdump;
     UTF8String_init(&(hexdump));
     UTF8String_pushBytesAsHex(
       &(hexdump),
       sizeof(SCARDCONTEXT),
-      (LPCBYTE) &(resultContext[0]));
+      (const BYTE *) &(resultContext[0]));
 
     OSSpecific_writeDebugMessage(
       "{SCardEstablishContext} success: %s",
@@ -212,10 +212,10 @@ WebCard_establishContext(
 
 BOOL
 WebCard_init(
-  _Out_ SCardReaderDB resultDatabase,
-  _Out_ LPSCARDCONTEXT resultContext)
+  _Out_ SCardReaderDB *resultDatabase,
+  _Out_ SCARDCONTEXT *resultContext)
 {
-  enum webcard_fetchreaders_enum fetch_result;
+  int fetch_result;
   BOOL should_fetch;
 
   SCardReaderDB_init(resultDatabase);
@@ -236,7 +236,7 @@ WebCard_init(
       resultContext[0],
       TRUE);
 
-    if (WEBCARD_FETCHREADERS__FAIL == fetch_result)
+    if (WEBCARD_FETCH_READERS__FAIL == fetch_result)
     {
       #if defined(_DEBUG)
       {
@@ -247,7 +247,7 @@ WebCard_init(
 
       return FALSE;
     }
-    else if (WEBCARD_FETCHREADERS__SERVICE_STOPPED == fetch_result)
+    else if (WEBCARD_FETCH_READERS__SERVICE_STOPPED == fetch_result)
     {
       SCardReleaseContext(resultContext[0]);
 
@@ -269,14 +269,14 @@ VOID
 WebCard_run(void)
 {
   SCARDCONTEXT context;
-  struct scard_reader_db_t database;
-  enum json_byte_stream_enum byte_stream_status;
-  enum webcard_fetchreaders_enum fetch_result;
+  SCardReaderDB database;
+  int byte_stream_status;
+  int fetch_result;
 
-  struct json_byte_stream_t json_stream;
-  struct json_object_t json_request;
-  struct json_object_t json_response;
-  struct json_array_t json_reader_names;
+  JsonByteStream json_stream;
+  JsonObject json_request;
+  JsonObject json_response;
+  JsonArray json_reader_names;
 
   clock_t cpu_time_start = clock();
   clock_t cpu_time_end;
@@ -311,10 +311,10 @@ WebCard_run(void)
           context,
           FALSE);
 
-        if ((WEBCARD_FETCHREADERS__FAIL != fetch_result) &&
-          (WEBCARD_FETCHREADERS__IGNORE != fetch_result))
+        if ((WEBCARD_FETCH_READERS__FAIL != fetch_result) &&
+          (WEBCARD_FETCH_READERS__IGNORE != fetch_result))
         {
-          if (WEBCARD_FETCHREADERS__SERVICE_STOPPED == fetch_result)
+          if (WEBCARD_FETCH_READERS__SERVICE_STOPPED == fetch_result)
           {
             SCardReleaseContext(context);
 
@@ -334,9 +334,9 @@ WebCard_run(void)
             WebCard_sendReaderEvent(
               NULL,
               0,
-              (WEBCARD_FETCHREADERS__MORE_READERS == fetch_result) ?
-                WEBCARD_READEREVENT__READERS_MORE :
-                WEBCARD_READEREVENT__READERS_LESS,
+              (WEBCARD_FETCH_READERS__MORE_READERS == fetch_result) ?
+                WEBCARD_READER_EVENT__READERS_MORE :
+                WEBCARD_READER_EVENT__READERS_LESS,
               &(json_response),
               &(json_reader_names));
 
@@ -362,7 +362,7 @@ WebCard_run(void)
 
       byte_stream_status = JsonByteStream_loadFromStandardInput(&(json_stream));
 
-      if (JSON_BYTESTREAM_VALID == byte_stream_status)
+      if (JSON_STREAM_STATUS__VALID == byte_stream_status)
       {
         WebCard_handleRequest(
           &(json_stream),
@@ -374,7 +374,7 @@ WebCard_run(void)
         JsonObject_destroy(&(json_request));
         JsonObject_destroy(&(json_response));
       }
-      else if (JSON_BYTESTREAM_NOMORE == byte_stream_status)
+      else if (JSON_STREAM_STATUS__NO_MORE == byte_stream_status)
       {
         active = FALSE;
       }
@@ -388,7 +388,7 @@ WebCard_run(void)
 
 VOID
 WebCard_close(
-  _Inout_ SCardReaderDB database,
+  _Inout_ SCardReaderDB *database,
   _In_ const SCARDCONTEXT context)
 {
   SCardReaderDB_destroy(database);
@@ -403,15 +403,15 @@ WebCard_close(
 
 VOID
 WebCard_handleRequest(
-  _Inout_ JsonByteStream jsonStream,
-  _Out_ JsonObject jsonRequest,
-  _Out_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database,
+  _Inout_ JsonByteStream *jsonStream,
+  _Out_ JsonObject *jsonRequest,
+  _Out_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database,
   _In_ const SCARDCONTEXT context)
 {
   BOOL test_bool;
-  struct json_value_t json_value;
-  struct utf8_string_t utf8_string;
+  JsonValue json_value;
+  UTF8String utf8_string;
   size_t command;
 
   /* Initialize JSON response object */
@@ -446,7 +446,7 @@ WebCard_handleRequest(
     &(json_value),
     "i");
 
-  if (!test_bool || (JSON_VALUETYPE_STRING != json_value.type))
+  if (!test_bool || (JSON_VALUE_TYPE__STRING != json_value.type))
   {
     return;
   }
@@ -467,7 +467,7 @@ WebCard_handleRequest(
     &(json_value),
     "c");
 
-  if (!test_bool || (JSON_VALUETYPE_NUMBER != json_value.type))
+  if (!test_bool || (JSON_VALUE_TYPE__NUMBER != json_value.type))
   {
     return;
   }
@@ -523,7 +523,7 @@ WebCard_handleRequest(
     {
       UTF8String_makeTemporary(&(utf8_string), WEBCARD_VERSION);
 
-      json_value.type = JSON_VALUETYPE_STRING;
+      json_value.type = JSON_VALUE_TYPE__STRING;
       json_value.value = &(utf8_string);
 
       test_bool = JsonObject_appendKeyValue(
@@ -547,7 +547,7 @@ WebCard_handleRequest(
   {
     /* Append an optional key-value "incomplete=true" */
 
-    json_value.type = JSON_VALUETYPE_TRUE;
+    json_value.type = JSON_VALUE_TYPE__TRUE;
     json_value.value = NULL;
 
     JsonObject_appendKeyValue(jsonResponse, "incomplete", &(json_value));
@@ -571,13 +571,13 @@ WebCard_handleRequest(
 
 BOOL
 WebCard_pushReaderNameToJsonString(
-  _In_ SCARD_READERSTATE const * reader,
-  _Out_ UTF8String resultReaderName)
+  _In_ const SCARD_READERSTATE *reader,
+  _Out_ UTF8String *resultReaderName)
 {
   BOOL test_bool;
 
   #ifdef _UNICODE
-    struct utf16_string_t utf16_reader_name;
+    UTF16String utf16_reader_name;
   #endif
 
   UTF8String_init(resultReaderName);
@@ -616,12 +616,12 @@ WebCard_pushReaderNameToJsonString(
 
 BOOL
 WebCard_pushReaderNameToJsonArray(
-  _In_ SCARD_READERSTATE const * reader,
-  _Inout_ JsonArray jsonArray)
+  _In_ const SCARD_READERSTATE *reader,
+  _Inout_ JsonArray *jsonArray)
 {
   BOOL test_bool;
-  struct json_value_t json_value;
-  struct utf8_string_t utf8_reader_name;
+  JsonValue json_value;
+  UTF8String utf8_reader_name;
 
   test_bool = WebCard_pushReaderNameToJsonString(
     reader,
@@ -635,7 +635,7 @@ WebCard_pushReaderNameToJsonArray(
 
   /* Put "Reader Name" at the end of given array */
 
-  json_value.type = JSON_VALUETYPE_STRING;
+  json_value.type = JSON_VALUE_TYPE__STRING;
   json_value.value = &(utf8_reader_name);
 
   test_bool = JsonArray_append(jsonArray, &(json_value));
@@ -649,13 +649,13 @@ WebCard_pushReaderNameToJsonArray(
 
 BOOL
 WebCard_pushReaderNameToJsonObject(
-  _In_ SCARD_READERSTATE const * reader,
-  _Inout_ JsonObject jsonObject,
+  _In_ const SCARD_READERSTATE *reader,
+  _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key)
 {
   BOOL test_bool;
-  struct json_value_t json_value;
-  struct utf8_string_t utf8_reader_name;
+  JsonValue json_value;
+  UTF8String utf8_reader_name;
 
   test_bool = WebCard_pushReaderNameToJsonString(
     reader,
@@ -669,7 +669,7 @@ WebCard_pushReaderNameToJsonObject(
 
   /* Add "Reader Name" under a specified key */
 
-  json_value.type = JSON_VALUETYPE_STRING;
+  json_value.type = JSON_VALUE_TYPE__STRING;
   json_value.value = &(utf8_reader_name);
 
   test_bool = JsonObject_appendKeyValue(
@@ -686,8 +686,8 @@ WebCard_pushReaderNameToJsonObject(
 
 BOOL
 WebCard_convertReaderStateToJsonObject(
-  _In_ SCARD_READERSTATE const * reader,
-  _Out_ JsonObject jsonReaderObject)
+  _In_ const SCARD_READERSTATE *reader,
+  _Out_ JsonObject *jsonReaderObject)
 {
   BOOL test_bool;
 
@@ -717,13 +717,13 @@ WebCard_convertReaderStateToJsonObject(
 
 BOOL
 WebCard_pushReaderAtrToJsonObject(
-  _In_ SCARD_READERSTATE const * reader,
-  _Inout_ JsonObject jsonObject,
+  _In_ const SCARD_READERSTATE *reader,
+  _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key)
 {
   BOOL test_bool;
-  struct json_value_t json_value;
-  struct utf8_string_t utf8_string;
+  JsonValue json_value;
+  UTF8String utf8_string;
 
   /* Copy Smart Card "ATR" identifier (bytearray to text) */
 
@@ -742,7 +742,7 @@ WebCard_pushReaderAtrToJsonObject(
 
   /* Add "card Answer To Reset" under a specified key */
 
-  json_value.type = JSON_VALUETYPE_STRING;
+  json_value.type = JSON_VALUE_TYPE__STRING;
   json_value.value = &(utf8_string);
 
   test_bool = JsonObject_appendKeyValue(
@@ -759,14 +759,14 @@ WebCard_pushReaderAtrToJsonObject(
 
 BOOL
 WebCard_convertReaderStatesToJsonArray(
-  _In_ ConstSCardReaderDB database,
-  _Out_ JsonArray jsonReadersArray)
+  _In_ const SCardReaderDB *database,
+  _Out_ JsonArray *jsonReadersArray)
 {
   BOOL test_bool;
-  struct json_value_t json_value;
-  struct json_object_t json_reader_object;
+  JsonValue json_value;
+  JsonObject json_reader_object;
 
-  json_value.type = JSON_VALUETYPE_OBJECT;
+  json_value.type = JSON_VALUE_TYPE__OBJECT;
   json_value.value = &(json_reader_object);
 
   /* Initialize JSON reader object */
@@ -804,12 +804,12 @@ WebCard_convertReaderStatesToJsonArray(
 
 BOOL
 WebCard_pushReadersListToJsonResponse(
-  _Inout_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database)
+  _Inout_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database)
 {
   BOOL test_bool;
-  struct json_array_t json_readers_array;
-  struct json_value_t json_value;
+  JsonArray json_readers_array;
+  JsonValue json_value;
 
   test_bool = WebCard_convertReaderStatesToJsonArray(
     database,
@@ -821,7 +821,7 @@ WebCard_pushReadersListToJsonResponse(
     return FALSE;
   }
 
-  json_value.type = JSON_VALUETYPE_ARRAY;
+  json_value.type = JSON_VALUE_TYPE__ARRAY;
   json_value.value = &(json_readers_array);
 
   test_bool = JsonObject_appendKeyValue(
@@ -837,16 +837,16 @@ WebCard_pushReadersListToJsonResponse(
 
 BOOL
 WebCard_tryConnectingToReader(
-  _In_ ConstJsonObject jsonRequest,
-  _Inout_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database,
+  _In_ const JsonObject *jsonRequest,
+  _Inout_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database,
   _In_ const SCARDCONTEXT context)
 {
   BOOL test_bool;
   size_t reader_index;
-  SCARD_READERSTATE const * reader;
+  const SCARD_READERSTATE *reader;
   DWORD share_mode = SCARD_SHARE_SHARED;
-  struct json_value_t json_value;
+  JsonValue json_value;
 
   /* Try to find the "r" key (reader index) */
 
@@ -855,7 +855,7 @@ WebCard_tryConnectingToReader(
     &(json_value),
     "r");
 
-  if (!test_bool || (JSON_VALUETYPE_NUMBER != json_value.type))
+  if (!test_bool || (JSON_VALUE_TYPE__NUMBER != json_value.type))
   {
     #if defined(_DEBUG)
     {
@@ -892,7 +892,7 @@ WebCard_tryConnectingToReader(
     &(json_value),
     "p");
 
-  if (test_bool && (JSON_VALUETYPE_NUMBER == json_value.type))
+  if (test_bool && (JSON_VALUE_TYPE__NUMBER == json_value.type))
   {
     share_mode = (DWORD) (((FLOAT *) json_value.value)[0]);
   }
@@ -921,12 +921,12 @@ WebCard_tryConnectingToReader(
 
 BOOL
 WebCard_tryDisconnectingFromReader(
-  _In_ ConstJsonObject jsonRequest,
-  _In_ ConstSCardReaderDB database)
+  _In_ const JsonObject *jsonRequest,
+  _In_ const SCardReaderDB *database)
 {
   BOOL test_bool;
   size_t reader_index;
-  struct json_value_t json_value;
+  JsonValue json_value;
 
   /* Try to find the "r" key (reader index) */
 
@@ -935,7 +935,7 @@ WebCard_tryDisconnectingFromReader(
     &(json_value),
     "r");
 
-  if (!test_bool || (JSON_VALUETYPE_NUMBER != json_value.type))
+  if (!test_bool || (JSON_VALUE_TYPE__NUMBER != json_value.type))
   {
     #if defined(_DEBUG)
     {
@@ -975,18 +975,18 @@ WebCard_tryDisconnectingFromReader(
 
 BOOL
 WebCard_transmitAndReceive(
-  _In_ ConstJsonObject jsonRequest,
-  _Inout_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database)
+  _In_ const JsonObject *jsonRequest,
+  _Inout_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database)
 {
   BOOL test_bool;
   size_t reader_index;
   LPBYTE input_bytes;
   size_t input_bytes_length;
   LPBYTE output_bytes;
-  struct json_value_t json_value;
-  struct utf8_string_t utf8_hex_apdu_response;
-  SCardConnection connection;
+  JsonValue json_value;
+  UTF8String utf8_hex_apdu_response;
+  SCardConnection *connection;
 
   /* Try to find the "r" key (reader index) */
 
@@ -995,7 +995,7 @@ WebCard_transmitAndReceive(
     &(json_value),
     "r");
 
-  if (!test_bool || (JSON_VALUETYPE_NUMBER != json_value.type))
+  if (!test_bool || (JSON_VALUE_TYPE__NUMBER != json_value.type))
   {
     #if defined(_DEBUG)
     {
@@ -1050,7 +1050,7 @@ WebCard_transmitAndReceive(
     &(json_value),
     "a");
 
-  if (!test_bool || (JSON_VALUETYPE_STRING != json_value.type))
+  if (!test_bool || (JSON_VALUE_TYPE__STRING != json_value.type))
   {
     return FALSE;
   }
@@ -1094,7 +1094,7 @@ WebCard_transmitAndReceive(
   {
     /* Add key "d" (Smart Card APDU response) */
 
-    json_value.type = JSON_VALUETYPE_STRING;
+    json_value.type = JSON_VALUE_TYPE__STRING;
     json_value.value = &(utf8_hex_apdu_response);
 
     test_bool = JsonObject_appendKeyValue(
@@ -1112,16 +1112,16 @@ WebCard_transmitAndReceive(
 
 VOID
 WebCard_sendReaderEvent(
-  _In_opt_ SCARD_READERSTATE const * reader,
+  _In_opt_ const SCARD_READERSTATE *reader,
   _In_ const size_t readerIndex,
-  _In_ const enum webcard_readerevent_enum readerEvent,
-  _Out_ JsonObject jsonResponse,
-  _In_opt_ ConstJsonArray jsonEventDetails)
+  _In_ const int readerEvent,
+  _Out_ JsonObject *jsonResponse,
+  _In_opt_ const JsonArray *jsonEventDetails)
 {
   BOOL test_bool;
   FLOAT test_float;
-  struct json_value_t json_value;
-  struct utf8_string_t utf8_string;
+  JsonValue json_value;
+  UTF8String utf8_string;
 
   #if defined(_DEBUG)
   {
@@ -1137,7 +1137,7 @@ WebCard_sendReaderEvent(
 
   JsonObject_init(jsonResponse);
 
-  json_value.type = JSON_VALUETYPE_NUMBER;
+  json_value.type = JSON_VALUE_TYPE__NUMBER;
   json_value.value = &(test_float);
 
   /* Add key "e" (reader event) */
@@ -1166,7 +1166,7 @@ WebCard_sendReaderEvent(
 
     /* Add key "d" (card Answer To Reset) on CARD INSERT event */
 
-    if (WEBCARD_READEREVENT__CARD_INSERTION == readerEvent)
+    if (WEBCARD_READER_EVENT__CARD_INSERTION == readerEvent)
     {
       test_bool = WebCard_pushReaderAtrToJsonObject(
         reader,
@@ -1182,8 +1182,8 @@ WebCard_sendReaderEvent(
     {
       /* Add key "n" (optional reader names) */
 
-      json_value.type = JSON_VALUETYPE_ARRAY;
-      json_value.value = (LPVOID) jsonEventDetails;
+      json_value.type = JSON_VALUE_TYPE__ARRAY;
+      json_value.value = (void *) jsonEventDetails;
 
       test_bool = JsonObject_appendKeyValue(
         jsonResponse,
@@ -1212,10 +1212,10 @@ WebCard_sendReaderEvent(
 
 VOID
 WebCard_handleStatusChange(
-  _Inout_ SCardReaderDB database,
+  _Inout_ SCardReaderDB *database,
   _In_ const SCARDCONTEXT context)
 {
-  struct json_object_t json_response;
+  JsonObject json_response;
 
   LONG result = SCardGetStatusChange(
     context,
@@ -1229,8 +1229,8 @@ WebCard_handleStatusChange(
 
   for (size_t i = 0; i < database->count; i++)
   {
-    LPSCARD_READERSTATE reader = &(database->states[i]);
-    SCardConnection connection = &(database->connections[i]);
+    SCARD_READERSTATE *reader = &(database->states[i]);
+    SCardConnection *connection = &(database->connections[i]);
 
     if (reader->dwEventState & SCARD_STATE_CHANGED)
     {
@@ -1240,23 +1240,23 @@ WebCard_handleStatusChange(
       }
       else
       {
-        enum webcard_readerevent_enum reader_event = WEBCARD_READEREVENT__NONE;
+        int reader_event = WEBCARD_READER_EVENT__NONE;
 
         if ((reader->dwCurrentState & SCARD_STATE_EMPTY) &&
           (reader->dwEventState & SCARD_STATE_PRESENT))
         {
-          reader_event = WEBCARD_READEREVENT__CARD_INSERTION;
+          reader_event = WEBCARD_READER_EVENT__CARD_INSERTION;
         }
         else if ((reader->dwCurrentState & SCARD_STATE_PRESENT) &&
         (reader->dwEventState & SCARD_STATE_EMPTY))
         {
-          reader_event = WEBCARD_READEREVENT__CARD_REMOVAL;
+          reader_event = WEBCARD_READER_EVENT__CARD_REMOVAL;
 
           /* Invalidate connection */
           connection->handle = 0;
         }
 
-        if (WEBCARD_READEREVENT__NONE != reader_event)
+        if (WEBCARD_READER_EVENT__NONE != reader_event)
         {
           WebCard_sendReaderEvent(
             reader,

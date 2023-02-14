@@ -9,7 +9,7 @@
 
 VOID
 JsonArray_init(
-  _Out_ JsonArray array)
+  _Out_ JsonArray *array)
 {
   array->count    = 0;
   array->capacity = 0;
@@ -20,7 +20,7 @@ JsonArray_init(
 
 VOID
 JsonArray_destroy(
-  _Inout_ JsonArray array)
+  _Inout_ JsonArray *array)
 {
   if (NULL != array->values)
   {
@@ -37,8 +37,8 @@ JsonArray_destroy(
 
 BOOL
 JsonArray_copy(
-  _Out_ JsonArray destination,
-  _In_ ConstJsonArray source)
+  _Out_ JsonArray *destination,
+  _In_ const JsonArray *source)
 {
   if (0 == source->count)
   {
@@ -47,7 +47,7 @@ JsonArray_copy(
   }
 
   const size_t capacity = Misc_nextPowerOfTwo(source->count - 1);
-  const size_t bytesize = sizeof(struct json_value_t) * capacity;
+  const size_t bytesize = sizeof(JsonValue) * capacity;
 
   destination->count = 0;
   destination->capacity = capacity;
@@ -69,8 +69,8 @@ JsonArray_copy(
 
 BOOL
 JsonArray_append(
-  _Inout_ JsonArray array,
-  _In_ ConstJsonValue value)
+  _Inout_ JsonArray *array,
+  _In_ const JsonValue *value)
 {
   size_t new_capacity = (array->count + 1);
 
@@ -78,8 +78,8 @@ JsonArray_append(
   {
     new_capacity = Misc_nextPowerOfTwo(new_capacity - 1);
 
-    const size_t new_bytesize = sizeof(struct json_value_t) * new_capacity;
-    JsonValue new_values = realloc(array->values, new_bytesize);
+    const size_t new_bytesize = sizeof(JsonValue) * new_capacity;
+    JsonValue *new_values = realloc(array->values, new_bytesize);
     if (NULL == new_values) { return FALSE; }
 
     array->values = new_values;
@@ -98,15 +98,15 @@ JsonArray_append(
 
 BOOL
 JsonArray_parse(
-  _Outptr_result_maybenull_ JsonArray * const result,
-  _Inout_ JsonByteStream stream)
+  _Outptr_result_maybenull_ JsonArray **const result,
+  _Inout_ JsonByteStream *stream)
 {
   BOOL test_bool;
   BYTE test_byte;
-  struct json_value_t json_value;
-  JsonValue json_value_ptr = &(json_value);
+  JsonValue json_value;
+  JsonValue *json_value_ptr = &(json_value);
 
-  result[0] = malloc(sizeof(struct json_array_t));
+  result[0] = malloc(sizeof(JsonArray));
   if (NULL == result[0]) { return FALSE; }
   JsonArray_init(result[0]);
 
@@ -184,8 +184,8 @@ JsonArray_parse(
 
 BOOL
 JsonArray_toString(
-  _In_ ConstJsonArray array,
-  _Inout_ UTF8String output)
+  _In_ const JsonArray *array,
+  _Inout_ UTF8String *output)
 {
   if (!UTF8String_pushByte(output, '['))
   {

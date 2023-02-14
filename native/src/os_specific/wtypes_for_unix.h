@@ -17,8 +17,8 @@
 #define TRUE   1
 
 typedef void VOID;
-typedef VOID * LPVOID;
-typedef VOID const * LPCVOID;
+typedef VOID *LPVOID;
+typedef const VOID *LPCVOID;
 
 typedef int BOOL;
 
@@ -27,18 +27,19 @@ typedef int32_t LONG;
 typedef float FLOAT;
 
 typedef uint32_t DWORD;
-typedef DWORD * LPDWORD;
+typedef DWORD *LPDWORD;
 
-typedef unsigned char BYTE;
-typedef BYTE * LPBYTE;
+typedef uint8_t BYTE;
+typedef BYTE *LPBYTE;
+typedef const BYTE *LPCBYTE;
 
 typedef char CHAR;
-typedef CHAR * LPSTR;
-typedef CHAR const * LPCSTR;
+typedef CHAR *LPSTR;
+typedef const CHAR *LPCSTR;
 
 typedef uint16_t WCHAR;
-typedef WCHAR * LPWSTR;
-typedef WCHAR const * LPCWSTR;
+typedef WCHAR *LPWSTR;
+typedef const WCHAR *LPCWSTR;
 
 typedef char TCHAR;
 typedef LPSTR LPTSTR;

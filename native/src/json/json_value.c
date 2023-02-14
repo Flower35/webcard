@@ -9,9 +9,9 @@
 
 VOID
 JsonValue_init(
-  _Out_ JsonValue value)
+  _Out_ JsonValue *value)
 {
-  value->type  = JSON_VALUETYPE_NULL;
+  value->type  = JSON_VALUE_TYPE__NULL;
   value->value = NULL;
 }
 
@@ -19,15 +19,15 @@ JsonValue_init(
 
 VOID
 JsonValue_destroy(
-  _Inout_ JsonValue value)
+  _Inout_ JsonValue *value)
 {
   if (NULL != value->value)
   {
     switch (value->type)
     {
-      case JSON_VALUETYPE_TRUE:
-      case JSON_VALUETYPE_FALSE:
-      case JSON_VALUETYPE_NULL:
+      case JSON_VALUE_TYPE__TRUE:
+      case JSON_VALUE_TYPE__FALSE:
+      case JSON_VALUE_TYPE__NULL:
       {
         return;
       }
@@ -39,24 +39,24 @@ JsonValue_destroy(
 
     switch (value->type)
     {
-      case JSON_VALUETYPE_STRING:
+      case JSON_VALUE_TYPE__STRING:
       {
         UTF8String_destroy(value->value);
         break;
       }
-      case JSON_VALUETYPE_OBJECT:
+      case JSON_VALUE_TYPE__OBJECT:
       {
         JsonObject_destroy(value->value);
         break;
       }
-      case JSON_VALUETYPE_ARRAY:
+      case JSON_VALUE_TYPE__ARRAY:
       {
         JsonArray_destroy(value->value);
         break;
       }
       default:
       {
-        /* `JSON_VALUETYPE_NUMBER` is just a pointer to one `FLOAT` */
+        /* `JSON_VALUE_TYPE__NUMBER` is just a pointer to one `FLOAT` */
       }
     }
 
@@ -68,8 +68,8 @@ JsonValue_destroy(
 
 BOOL
 JsonValue_copy(
-  _Out_ JsonValue destination,
-  _In_ ConstJsonValue source)
+  _Out_ JsonValue *destination,
+  _In_ const JsonValue *source)
 {
   size_t bytesize;
 
@@ -81,24 +81,24 @@ JsonValue_copy(
 
   switch (source->type)
   {
-    case JSON_VALUETYPE_STRING:
+    case JSON_VALUE_TYPE__STRING:
     {
-      bytesize = sizeof(struct utf8_string_t);
+      bytesize = sizeof(UTF8String);
       break;
     }
-    case JSON_VALUETYPE_NUMBER:
+    case JSON_VALUE_TYPE__NUMBER:
     {
       bytesize = sizeof(FLOAT);
       break;
     }
-    case JSON_VALUETYPE_OBJECT:
+    case JSON_VALUE_TYPE__OBJECT:
     {
-      bytesize = sizeof(struct json_object_t);
+      bytesize = sizeof(JsonObject);
       break;
     }
-    case JSON_VALUETYPE_ARRAY:
+    case JSON_VALUE_TYPE__ARRAY:
     {
-      bytesize = sizeof(struct json_array_t);
+      bytesize = sizeof(JsonArray);
       break;
     }
     default:
@@ -117,20 +117,20 @@ JsonValue_copy(
 
   switch (source->type)
   {
-    case JSON_VALUETYPE_STRING:
+    case JSON_VALUE_TYPE__STRING:
     {
       return UTF8String_copy(destination->value, source->value);
     }
-    case JSON_VALUETYPE_NUMBER:
+    case JSON_VALUE_TYPE__NUMBER:
     {
       ((FLOAT *) destination->value)[0] = ((FLOAT *) source->value)[0];
       return TRUE;
     }
-    case JSON_VALUETYPE_OBJECT:
+    case JSON_VALUE_TYPE__OBJECT:
     {
       return JsonObject_copy(destination->value, source->value);
     }
-    case JSON_VALUETYPE_ARRAY:
+    case JSON_VALUE_TYPE__ARRAY:
     {
       return JsonArray_copy(destination->value, source->value);
     }
@@ -145,12 +145,12 @@ JsonValue_copy(
 
 BOOL
 JsonValue_parseNumber(
-  _Inout_ JsonValue value,
-  _Inout_ JsonByteStream stream)
+  _Inout_ JsonValue *value,
+  _Inout_ JsonByteStream *stream)
 {
   char buf[256];
-  char * buf_end = buf;
-  char * buf_end_dummy;
+  char *buf_end = buf;
+  char *buf_end_dummy;
   FLOAT number;
 
   /* 'A': expecting a minus ('-') or a digit ('0'-'9') */
@@ -459,15 +459,15 @@ JsonValue_parseNumber(
 
 BOOL
 JsonValue_parse(
-  _Outptr_result_maybenull_ JsonValue * const result,
+  _Outptr_result_maybenull_ JsonValue **const result,
   _In_ BOOL allocate,
-  _Inout_ JsonByteStream stream)
+  _Inout_ JsonByteStream *stream)
 {
   BYTE test_bytes[2][4];
 
   if (allocate)
   {
-    result[0] = malloc(sizeof(struct json_value_t));
+    result[0] = malloc(sizeof(JsonValue));
     if (NULL == result[0]) { return FALSE; }
   }
   JsonValue_init(result[0]);
@@ -487,9 +487,9 @@ JsonValue_parse(
     case '"':
     {
       /* string value */
-      result[0]->type = JSON_VALUETYPE_STRING;
+      result[0]->type = JSON_VALUE_TYPE__STRING;
 
-      if (!JsonString_parse((UTF8String *) &(result[0]->value), TRUE, stream))
+      if (!JsonString_parse((UTF8String **) &(result[0]->value), TRUE, stream))
       {
         return FALSE;
       }
@@ -501,7 +501,7 @@ JsonValue_parse(
     case '5': case '6': case '7': case '8': case '9':
     {
       /* number value */
-      result[0]->type = JSON_VALUETYPE_NUMBER;
+      result[0]->type = JSON_VALUE_TYPE__NUMBER;
 
       if (!JsonValue_parseNumber(result[0], stream))
       {
@@ -513,9 +513,9 @@ JsonValue_parse(
     case '{':
     {
       /* object value */
-      result[0]->type = JSON_VALUETYPE_OBJECT;
+      result[0]->type = JSON_VALUE_TYPE__OBJECT;
 
-      if (!JsonObject_parse((JsonObject *) &(result[0]->value), TRUE, stream))
+      if (!JsonObject_parse((JsonObject **) &(result[0]->value), TRUE, stream))
       {
         return FALSE;
       }
@@ -525,9 +525,9 @@ JsonValue_parse(
     case '[':
     {
       /* array value */
-      result[0]->type = JSON_VALUETYPE_ARRAY;
+      result[0]->type = JSON_VALUE_TYPE__ARRAY;
 
-      if (!JsonArray_parse((JsonArray *) &(result[0]->value), stream))
+      if (!JsonArray_parse((JsonArray **) &(result[0]->value), stream))
       {
         return FALSE;
       }
@@ -537,7 +537,7 @@ JsonValue_parse(
     case 't':
     {
       /* true value */
-      result[0]->type = JSON_VALUETYPE_TRUE;
+      result[0]->type = JSON_VALUE_TYPE__TRUE;
 
       if (!JsonByteStream_read(stream, test_bytes[0], 3))
       {
@@ -563,7 +563,7 @@ JsonValue_parse(
     case 'f':
     {
       /* false value */
-      result[0]->type = JSON_VALUETYPE_FALSE;
+      result[0]->type = JSON_VALUE_TYPE__FALSE;
 
       if (!JsonByteStream_read(stream, test_bytes[0], 4))
       {
@@ -590,7 +590,7 @@ JsonValue_parse(
     case 'n':
     {
       /* null value */
-      result[0]->type = JSON_VALUETYPE_NULL;
+      result[0]->type = JSON_VALUE_TYPE__NULL;
 
       if (!JsonByteStream_read(stream, test_bytes[0], 3))
       {
@@ -653,37 +653,37 @@ JsonValue_parse(
 
 BOOL
 JsonValue_toString(
-  _In_ ConstJsonValue value,
-  _Inout_ UTF8String output)
+  _In_ const JsonValue *value,
+  _Inout_ UTF8String *output)
 {
   char number_buffer[64];
   FLOAT value_number;
 
   switch (value->type)
   {
-    case JSON_VALUETYPE_STRING:
+    case JSON_VALUE_TYPE__STRING:
     {
       return JsonString_toString(value->value, output);
     }
-    case JSON_VALUETYPE_NUMBER:
+    case JSON_VALUE_TYPE__NUMBER:
     {
       value_number = ((FLOAT *) value->value)[0];
       snprintf(number_buffer, 64, "%.f", value_number);
       return UTF8String_pushText(output, number_buffer, 0);
     }
-    case JSON_VALUETYPE_OBJECT:
+    case JSON_VALUE_TYPE__OBJECT:
     {
       return JsonObject_toString(value->value, output);
     }
-    case JSON_VALUETYPE_ARRAY:
+    case JSON_VALUE_TYPE__ARRAY:
     {
       return JsonArray_toString(value->value, output);
     }
-    case JSON_VALUETYPE_TRUE:
+    case JSON_VALUE_TYPE__TRUE:
     {
       return UTF8String_pushText(output, "true", 4);
     }
-    case JSON_VALUETYPE_FALSE:
+    case JSON_VALUE_TYPE__FALSE:
     {
       return UTF8String_pushText(output, "false", 5);
     }

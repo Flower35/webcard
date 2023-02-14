@@ -94,11 +94,6 @@
 
 #endif
 
-#ifndef _LPCBYTE_DEFINED
-#define _LPCBYTE_DEFINED
-typedef BYTE const * LPCBYTE;
-#endif
-
 
 /**************************************************************/
 /* CUSTOM WIDE CHARS (exactly 16-bit wide)                    */
@@ -144,7 +139,7 @@ OSSpecific_validateTypesOfStreams(
 extern BOOL
 OSSpecific_peekStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ size_t * streamSize);
+  _Out_ size_t *streamSizeRef);
 
 /**
  * @brief Reads bytes from a stream.
@@ -157,7 +152,7 @@ OSSpecific_peekStream(
 extern BOOL
 OSSpecific_readBytesFromStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ LPVOID output,
+  _Out_ void *output,
   _In_ const size_t size);
 
 /**
@@ -171,7 +166,7 @@ OSSpecific_readBytesFromStream(
 extern BOOL
 OSSpecific_writeBytesToStream(
   _In_ const os_specific_stream_t stream,
-  _In_ LPCVOID input,
+  _In_ const void *input,
   _In_ const size_t size);
 
 

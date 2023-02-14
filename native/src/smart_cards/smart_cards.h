@@ -35,46 +35,40 @@
 /* WEBCARD DEFINITIONS                                        */
 /**************************************************************/
 
-#define WEBCARD_VERSION  "0.3.1"
+#define WEBCARD_VERSION  "0.4.0"
 
 #define MAX_APDU_SIZE  0x7FFF
 
 /**
  * Possible "Reader Event" values.
  */
-enum webcard_readerevent_enum
-{
-  WEBCARD_READEREVENT__NONE           = 0,
-  WEBCARD_READEREVENT__CARD_INSERTION = 1,
-  WEBCARD_READEREVENT__CARD_REMOVAL   = 2,
-  WEBCARD_READEREVENT__READERS_MORE   = 3,
-  WEBCARD_READEREVENT__READERS_LESS   = 4
-};
+
+  #define WEBCARD_READER_EVENT__NONE            0
+  #define WEBCARD_READER_EVENT__CARD_INSERTION  1
+  #define WEBCARD_READER_EVENT__CARD_REMOVAL    2
+  #define WEBCARD_READER_EVENT__READERS_MORE    3
+  #define WEBCARD_READER_EVENT__READERS_LESS    4
 
 /**
  * Possible "Webcard Command" values.
  */
-enum webcard_command_enum
-{
-  WEBCARD_COMMAND__NONE         =  0,
-  WEBCARD_COMMAND__LIST_READERS =  1,
-  WEBCARD_COMMAND__CONNECT      =  2,
-  WEBCARD_COMMAND__DISCONNECT   =  3,
-  WEBCARD_COMMAND__TRANSCEIVE   =  4,
-  WEBCARD_COMMAND__GET_VERSION  = 10,
-};
+
+  #define WEBCARD_COMMAND__NONE           0
+  #define WEBCARD_COMMAND__LIST_READERS   1
+  #define WEBCARD_COMMAND__CONNECT        2
+  #define WEBCARD_COMMAND__DISCONNECT     3
+  #define WEBCARD_COMMAND__TRANSCEIVE     4
+  #define WEBCARD_COMMAND__GET_VERSION   10
 
 /**
  * Possible return values for `SCardReaderDB_fetch` function.
  */
-enum webcard_fetchreaders_enum
-{
-  WEBCARD_FETCHREADERS__FAIL            = 0,
-  WEBCARD_FETCHREADERS__SERVICE_STOPPED = 1,
-  WEBCARD_FETCHREADERS__IGNORE          = 2,
-  WEBCARD_FETCHREADERS__MORE_READERS    = 3,
-  WEBCARD_FETCHREADERS__LESS_READERS    = 4
-};
+
+  #define WEBCARD_FETCH_READERS__FAIL             0
+  #define WEBCARD_FETCH_READERS__SERVICE_STOPPED  1
+  #define WEBCARD_FETCH_READERS__IGNORE           2
+  #define WEBCARD_FETCH_READERS__MORE_READERS     3
+  #define WEBCARD_FETCH_READERS__LESS_READERS     4
 
 
 /**************************************************************/
@@ -82,21 +76,14 @@ enum webcard_fetchreaders_enum
 /**************************************************************/
 
 /**
- * `SCardConnection` is a reference to any
- * `scard_connection_t` structure.
+ * `SCardConnection` type definition.
  */
-typedef struct scard_connection_t * SCardConnection;
-
-/**
- * `SCardConnection` is a reference to a CONSTANT
- * `scard_connection_t` structure.
- */
-typedef struct scard_connection_t const * ConstSCardConnection;
+typedef struct SCardConnection SCardConnection;
 
 /**
  * Connection parameters for disgnated Smart Card reader.
  */
-struct scard_connection_t
+struct SCardConnection
 {
   /** A handle that identifies the connection to the Smart Card in the designated reader. */
   SCARDHANDLE handle;
@@ -116,7 +103,7 @@ struct scard_connection_t
  */
 extern VOID
 SCardConnection_init(
-  _Out_ SCardConnection connection);
+  _Out_ SCardConnection *connection);
 
 /**
  * @brief Opens connection to a Smart Card Reader.
@@ -131,7 +118,7 @@ SCardConnection_init(
  */
 extern BOOL
 SCardConnection_open(
-  _Inout_ SCardConnection connection,
+  _Inout_ SCardConnection *connection,
   _In_ const SCARDCONTEXT context,
   _In_ LPCTSTR readerName,
   _In_ const DWORD shareMode);
@@ -145,7 +132,7 @@ SCardConnection_open(
  */
 extern BOOL
 SCardConnection_close(
-  _Inout_ SCardConnection connection);
+  _Inout_ SCardConnection *connection);
 
 /**
  * @brief Sends a service request to the smart card
@@ -156,7 +143,7 @@ SCardConnection_close(
  * @param[in] input Data to be written to the card.
  * @param[in] inputLength The length of `input` buffer, in bytes.
  * @param[out] output Data returned from the card.
- * @param[in,out] outputLengthPointer Supplies the length, in bytes,
+ * @param[in,out] outputLengthRef Supplies the length, in bytes,
  * of the `output` buffer, and receives the actual number of bytes
  * received from the smart card.
  * @return `TRUE` on success (one APDU sent and one APDU received),
@@ -164,11 +151,11 @@ SCardConnection_close(
  */
 extern BOOL
 SCardConnection_transceiveSingle(
-  _In_ ConstSCardConnection connection,
-  _In_ LPCBYTE input,
+  _In_ const SCardConnection *connection,
+  _In_ const BYTE *input,
   _In_ const DWORD inputLength,
-  _Out_ LPBYTE output,
-  _Inout_ LPDWORD outputLengthPointer);
+  _Out_ BYTE *output,
+  _Inout_ DWORD *outputLengthRef);
 
 /**
  * @brief Sends a large APDU to the smart card
@@ -187,9 +174,9 @@ SCardConnection_transceiveSingle(
  */
 extern BOOL
 SCardConnection_transceiveMultiple(
-  _In_ ConstSCardConnection connection,
-  _Inout_ UTF8String hexStringResult,
-  _In_ LPCBYTE input,
+  _In_ const SCardConnection *connection,
+  _Inout_ UTF8String *hexStringResult,
+  _In_ const BYTE *input,
   _In_ const DWORD inputLength,
   _Out_ LPBYTE output,
   _In_ const DWORD outputLength);
@@ -200,21 +187,14 @@ SCardConnection_transceiveMultiple(
 /**************************************************************/
 
 /**
- * `SCardReaderDB` is a reference to any
- * `scard_reader_db_t` structure.
+ * `SCardReaderDB` type definition.
  */
-typedef struct scard_reader_db_t * SCardReaderDB;
-
-/**
- * `SCardReaderDB` is a reference to a CONSTANT
- * `scard_reader_db_t` structure.
- */
-typedef struct scard_reader_db_t const * ConstSCardReaderDB;
+typedef struct SCardReaderDB SCardReaderDB;
 
 /**
  * Database of Smart Card Readers.
  */
-struct scard_reader_db_t
+struct SCardReaderDB
 {
   /** Number of allocated Smart Card Readers. */
   DWORD count;
@@ -223,13 +203,13 @@ struct scard_reader_db_t
    * Array of `SCARD_READERSTATE` structures, needed for
    * `SCardGetStatusChange()` function.
    */
-  LPSCARD_READERSTATE states;
+  SCARD_READERSTATE *states;
 
   /**
-   * Array of `scard_connection_t` structures, needed for
+   * Array of `SCardConnection` structures, needed for
    * establishing connections and for data transmission.
    */
-  SCardConnection connections;
+  SCardConnection *connections;
 };
 
 /**
@@ -239,7 +219,7 @@ struct scard_reader_db_t
  */
 extern VOID
 SCardReaderDB_init(
-  _Out_ SCardReaderDB database);
+  _Out_ SCardReaderDB *database);
 
 /**
  * @brief `SCardReaderDB` destructor.
@@ -250,7 +230,7 @@ SCardReaderDB_init(
  */
 extern VOID
 SCardReaderDB_destroy(
-  _Inout_ SCardReaderDB database);
+  _Inout_ SCardReaderDB *database);
 
 /**
  * @brief Prepares a Smart Card Reader Database (list od states
@@ -267,7 +247,7 @@ SCardReaderDB_destroy(
  */
 extern BOOL
 SCardReaderDB_load(
-  _Out_ SCardReaderDB database,
+  _Out_ SCardReaderDB *database,
   LPCTSTR readerNames);
 
 /**
@@ -279,7 +259,7 @@ SCardReaderDB_load(
  */
 extern BOOL
 SCardReaderDB_hasReaderNamed(
-  _In_ ConstSCardReaderDB database,
+  _In_ const SCardReaderDB *database,
   _In_ LPCTSTR readerName);
 
 /**
@@ -291,23 +271,23 @@ SCardReaderDB_hasReaderNamed(
  * to which the names of changed (plugged in or out) readers will be appended.
  * @param[in] context A handle that identifies the resource manager context.
  * @param[in] firstFetch Should the initial contents of `database` be ignored?
- * @return `WEBCARD_FETCHREADERS__IGNORE` if no changes were detected;
- * `WEBCARD_FETCHREADERS__LESS_READERS` if some reades were disconnected
+ * @return `WEBCARD_FETCH_READERS__IGNORE` if no changes were detected;
+ * `WEBCARD_FETCH_READERS__LESS_READERS` if some reades were disconnected
  * (and `jsonReaderNames` will hold the names of now-missing readers);
- * `WEBCARD_FETCHREADERS__MORE_READERS` if some readers were connected
+ * `WEBCARD_FETCH_READERS__MORE_READERS` if some readers were connected
  * (and `jsonReaderNames` will hold the names of just-added readers);
- * `WEBCARD_FETCHREADERS__SERVICE_STOPPED` if last reader was disconnected,
+ * `WEBCARD_FETCH_READERS__SERVICE_STOPPED` if last reader was disconnected,
  * the Smart Card Service has stopped and must be re-established;
- * `WEBCARD_FETCHREADERS__FAIL` on any error (and the Database doesn't change).
+ * `WEBCARD_FETCH_READERS__FAIL` on any error (and the Database doesn't change).
  *
  * @note After this call, `jsonReaderNames` will hold a VALID
  * (at least initialized) `JsonArray` object.
  * It must be released by the caller.
  */
-extern enum webcard_fetchreaders_enum
+extern int
 SCardReaderDB_fetch(
-  _Inout_ SCardReaderDB database,
-  _Out_ JsonArray jsonReaderNames,
+  _Inout_ SCardReaderDB *database,
+  _Out_ JsonArray *jsonReaderNames,
   _In_ const SCARDCONTEXT context,
   _In_ const BOOL firstFetch);
 
@@ -356,8 +336,8 @@ WebCard_establishContext(
  */
 extern BOOL
 WebCard_init(
-  _Out_ SCardReaderDB resultDatabase,
-  _Out_ LPSCARDCONTEXT resultContext);
+  _Out_ SCardReaderDB *resultDatabase,
+  _Out_ SCARDCONTEXT *resultContext);
 
 /**
  * @brief Enters the `WebCard` main loop.
@@ -376,7 +356,7 @@ WebCard_run(void);
  */
 extern VOID
 WebCard_close(
-  _Inout_ SCardReaderDB database,
+  _Inout_ SCardReaderDB *database,
   _In_ const SCARDCONTEXT context);
 
 /**
@@ -397,10 +377,10 @@ WebCard_close(
  */
 extern VOID
 WebCard_handleRequest(
-  _Inout_ JsonByteStream jsonStream,
-  _Out_ JsonObject jsonRequest,
-  _Out_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database,
+  _Inout_ JsonByteStream *jsonStream,
+  _Out_ JsonObject *jsonRequest,
+  _Out_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database,
   _In_ const SCARDCONTEXT context);
 
 /**
@@ -421,8 +401,8 @@ WebCard_handleRequest(
  */
 extern BOOL
 WebCard_pushReaderNameToJsonString(
-  _In_ SCARD_READERSTATE const * reader,
-  _Out_ UTF8String resultReaderName);
+  _In_ const SCARD_READERSTATE *reader,
+  _Out_ UTF8String *resultReaderName);
 
 /**
  * @brief Appends selected Reader's name to a given JSON Array.
@@ -435,8 +415,8 @@ WebCard_pushReaderNameToJsonString(
  */
 extern BOOL
 WebCard_pushReaderNameToJsonArray(
-  _In_ SCARD_READERSTATE const * reader,
-  _Inout_ JsonArray jsonArray);
+  _In_ const SCARD_READERSTATE *reader,
+  _Inout_ JsonArray *jsonArray);
 
 /**
  * @brief Appends selected Reader's name to a given JSON Object under some key.
@@ -452,8 +432,8 @@ WebCard_pushReaderNameToJsonArray(
  */
 extern BOOL
 WebCard_pushReaderNameToJsonObject(
-  _In_ SCARD_READERSTATE const * reader,
-  _Inout_ JsonObject jsonObject,
+  _In_ const SCARD_READERSTATE *reader,
+  _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key);
 
 /**
@@ -474,8 +454,8 @@ WebCard_pushReaderNameToJsonObject(
  */
 extern BOOL
 WebCard_convertReaderStateToJsonObject(
-  _In_ SCARD_READERSTATE const * reader,
-  _Out_ JsonObject jsonReaderObject);
+  _In_ const SCARD_READERSTATE *reader,
+  _Out_ JsonObject *jsonReaderObject);
 
 /**
  * @brief Appends selected Reader's ATR to a given JSON Object under some key.
@@ -491,8 +471,8 @@ WebCard_convertReaderStateToJsonObject(
  */
 extern BOOL
 WebCard_pushReaderAtrToJsonObject(
-  _In_ SCARD_READERSTATE const * reader,
-  _Inout_ JsonObject jsonObject,
+  _In_ const SCARD_READERSTATE *reader,
+  _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key);
 
 /**
@@ -509,8 +489,8 @@ WebCard_pushReaderAtrToJsonObject(
  */
 extern BOOL
 WebCard_convertReaderStatesToJsonArray(
-  _In_ ConstSCardReaderDB database,
-  _Out_ JsonArray jsonReadersArray);
+  _In_ const SCardReaderDB *database,
+  _Out_ JsonArray *jsonReadersArray);
 
 /**
  * @brief Executes one of the main WebCard commands, which gathers
@@ -525,8 +505,8 @@ WebCard_convertReaderStatesToJsonArray(
  */
 extern BOOL
 WebCard_pushReadersListToJsonResponse(
-  _Inout_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database);
+  _Inout_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database);
 
 /**
  * @brief Executes one of the main WebCard commands, which attempts
@@ -546,9 +526,9 @@ WebCard_pushReadersListToJsonResponse(
  */
 extern BOOL
 WebCard_tryConnectingToReader(
-  _In_ ConstJsonObject jsonRequest,
-  _Inout_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database,
+  _In_ const JsonObject *jsonRequest,
+  _Inout_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database,
   _In_ const SCARDCONTEXT context);
 
 /**
@@ -564,8 +544,8 @@ WebCard_tryConnectingToReader(
  */
 extern BOOL
 WebCard_tryDisconnectingFromReader(
-  _In_ ConstJsonObject jsonRequest,
-  _In_ ConstSCardReaderDB database);
+  _In_ const JsonObject *jsonRequest,
+  _In_ const SCardReaderDB *database);
 
 /**
  * @brief Executes one of the main WebCard commands, which attempts to transmit
@@ -583,9 +563,9 @@ WebCard_tryDisconnectingFromReader(
  */
 extern BOOL
 WebCard_transmitAndReceive(
-  _In_ ConstJsonObject jsonRequest,
-  _Inout_ JsonObject jsonResponse,
-  _In_ ConstSCardReaderDB database);
+  _In_ const JsonObject *jsonRequest,
+  _Inout_ JsonObject *jsonResponse,
+  _In_ const SCardReaderDB *database);
 
 /**
  * @brief Sends selected Reader Event to the Standard Output.
@@ -617,11 +597,11 @@ WebCard_transmitAndReceive(
  */
 extern VOID
 WebCard_sendReaderEvent(
-  _In_opt_ SCARD_READERSTATE const * reader,
+  _In_opt_ const SCARD_READERSTATE *reader,
   _In_ const size_t readerIndex,
-  _In_ const enum webcard_readerevent_enum readerEvent,
-  _Out_ JsonObject jsonResponse,
-  _In_opt_ ConstJsonArray jsonEventDetails);
+  _In_ const int readerEvent,
+  _Out_ JsonObject *jsonResponse,
+  _In_opt_ const JsonArray *jsonEventDetails);
 
 /**
  * @brief Checks if any Reader changed status (ICC connected/disconnected),
@@ -632,7 +612,7 @@ WebCard_sendReaderEvent(
  */
 extern VOID
 WebCard_handleStatusChange(
-  _Inout_ SCardReaderDB database,
+  _Inout_ SCardReaderDB *database,
   _In_ const SCARDCONTEXT context);
 
 

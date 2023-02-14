@@ -10,7 +10,7 @@
 
 VOID
 UTF8String_init(
-  _Out_ UTF8String string)
+  _Out_ UTF8String *string)
 {
   string->length   = 0;
   string->capacity = 0;
@@ -21,7 +21,7 @@ UTF8String_init(
 
 VOID
 UTF8String_destroy(
-  _Inout_ UTF8String string)
+  _Inout_ UTF8String *string)
 {
   if (NULL != string->text)
   {
@@ -42,7 +42,7 @@ UTF8String_destroy(
  */
 BOOL
 UTF8String_assertCapacity(
-  _Inout_ UTF8String string,
+  _Inout_ UTF8String *string,
   _In_ const size_t additionalLength)
 {
   size_t new_capacity = string->length + additionalLength + 1;
@@ -66,8 +66,8 @@ UTF8String_assertCapacity(
 
 BOOL
 UTF8String_copy(
-  _Out_ UTF8String destination,
-  _In_ ConstUTF8String source)
+  _Out_ UTF8String *destination,
+  _In_ const UTF8String *source)
 {
   if (0 == source->length)
   {
@@ -93,7 +93,7 @@ UTF8String_copy(
 
 VOID
 UTF8String_makeTemporary(
-  _Out_ UTF8String string,
+  _Out_ UTF8String *string,
   _In_ LPCSTR text)
 {
   string->length = strlen(text);
@@ -105,7 +105,7 @@ UTF8String_makeTemporary(
 
 BOOL
 UTF8String_pushByte(
-  _Inout_ UTF8String string,
+  _Inout_ UTF8String *string,
   _In_ const BYTE byte)
 {
   if (!UTF8String_assertCapacity(string, 1))
@@ -124,9 +124,9 @@ UTF8String_pushByte(
 
 BOOL
 UTF8String_pushBytesAsHex(
-  _Inout_ UTF8String string,
+  _Inout_ UTF8String *string,
   _In_ size_t byteArraySize,
-  _In_ LPCBYTE bytes)
+  _In_ const BYTE *bytes)
 {
   if (!UTF8String_assertCapacity(string, (2 * byteArraySize)))
   {
@@ -161,18 +161,18 @@ UTF8String_pushBytesAsHex(
 
 BOOL
 UTF8String_hexToByteArray(
-  _In_ ConstUTF8String string,
-  _Out_ size_t * byteArraySizePointer,
-  _Outptr_result_maybenull_ LPBYTE * result)
+  _In_ const UTF8String *string,
+  _Out_ size_t *byteArraySizeRef,
+  _Outptr_result_maybenull_ BYTE **const result)
 {
   const size_t output_size = string->length / 2;
 
   result[0] = malloc(sizeof(BYTE) * output_size);
   if (NULL == result[0]) { return FALSE; }
 
-  byteArraySizePointer[0] = output_size;
+  byteArraySizeRef[0] = output_size;
 
-  LPCBYTE text = string->text;
+  const BYTE *text = string->text;
 
   for (size_t i = 0; i < output_size; i++)
   {
@@ -218,7 +218,7 @@ UTF8String_hexToByteArray(
 
 BOOL
 UTF8String_pushText(
-  _Inout_ UTF8String string,
+  _Inout_ UTF8String *string,
   _In_ LPCSTR rightText,
   _In_ size_t rightTextLength)
 {
@@ -250,7 +250,7 @@ UTF8String_pushText(
 
 BOOL
 UTF8String_matches(
-  _In_ ConstUTF8String string,
+  _In_ const UTF8String *string,
   _In_z_ LPCSTR testedText)
 {
   size_t i;
@@ -270,7 +270,7 @@ UTF8String_matches(
 
 BOOL
 UTF8String_writeToStandardOutput(
-  _In_ ConstUTF8String string)
+  _In_ const UTF8String *string)
 {
   os_specific_stream_t stdout_stream;
 
@@ -308,7 +308,7 @@ UTF8String_writeToStandardOutput(
 
 VOID
 UTF16String_init(
-  _Out_ UTF16String string)
+  _Out_ UTF16String *string)
 {
   string->length   = 0;
   string->capacity = 0;
@@ -319,7 +319,7 @@ UTF16String_init(
 
 VOID
 UTF16String_destroy(
-  _Inout_ UTF16String string)
+  _Inout_ UTF16String *string)
 {
   if (NULL != string->text)
   {
@@ -340,7 +340,7 @@ UTF16String_destroy(
  */
 BOOL
 UTF16String_assertCapacity(
-  _Inout_ UTF16String string,
+  _Inout_ UTF16String *string,
   _In_ const size_t additionalLength)
 {
   size_t new_capacity = string->length + additionalLength + 1;
@@ -364,8 +364,8 @@ UTF16String_assertCapacity(
 
 BOOL
 UTF16String_copy(
-  _Out_ UTF16String destination,
-  _In_ ConstUTF16String source)
+  _Out_ UTF16String *destination,
+  _In_ const UTF16String *source)
 {
   if (0 == source->length)
   {
@@ -391,7 +391,7 @@ UTF16String_copy(
 
 BOOL
 UTF16String_pushWideChar(
-  _Inout_ UTF16String string,
+  _Inout_ UTF16String *string,
   _In_ const WCHAR code)
 {
   if (!UTF16String_assertCapacity(string, 1))
@@ -410,9 +410,9 @@ UTF16String_pushWideChar(
 
 BOOL
 UTF16String_pushBytesAsHex(
-  _Inout_ UTF16String string,
+  _Inout_ UTF16String *string,
   _In_ size_t byteArraySize,
-  _In_ LPCBYTE bytes)
+  _In_ const BYTE *bytes)
 {
   if (!UTF16String_assertCapacity(string, (2 * byteArraySize)))
   {
@@ -447,16 +447,16 @@ UTF16String_pushBytesAsHex(
 
 BOOL
 UTF16String_hexToByteArray(
-  _In_ ConstUTF16String string,
-  _Out_ size_t * byteArraySizePointer,
-  _Outptr_result_maybenull_ LPBYTE * result)
+  _In_ const UTF16String *string,
+  _Out_ size_t *byteArraySizeRef,
+  _Outptr_result_maybenull_ BYTE **const result)
 {
   const size_t output_size = string->length / 2;
 
   result[0] = malloc(sizeof(BYTE) * output_size);
   if (NULL == result[0]) { return FALSE; }
 
-  byteArraySizePointer[0] = output_size;
+  byteArraySizeRef[0] = output_size;
 
   LPCWSTR text = string->text;
 
@@ -504,7 +504,7 @@ UTF16String_hexToByteArray(
 
 BOOL
 UTF16String_pushText(
-  _Inout_ UTF16String string,
+  _Inout_ UTF16String *string,
   _In_ LPCWSTR rightText,
   _In_ size_t rightTextLength)
 {
@@ -536,7 +536,7 @@ UTF16String_pushText(
 
 BOOL
 UTF16String_matches(
-  _In_ ConstUTF16String string,
+  _In_ const UTF16String *string,
   _In_z_ LPCWSTR testedText)
 {
   size_t i;
@@ -556,9 +556,9 @@ UTF16String_matches(
 
 BOOL
 UTF8_validateTransformation(
-  _In_ LPCBYTE bytes,
-  _Inout_ size_t * lengthRef,
-  _Out_opt_ uint32_t * codePointRef)
+  _In_ const BYTE *bytes,
+  _Inout_ size_t *lengthRef,
+  _Out_opt_ uint32_t *codePointRef)
 {
   uint32_t codepoint;
 
@@ -657,8 +657,8 @@ UTF8_validateTransformation(
 
 BOOL
 UTF16String_toUTF8(
-  _In_ ConstUTF16String string,
-  _Inout_ UTF8String output)
+  _In_ const UTF16String *string,
+  _Inout_ UTF8String *output)
 {
   for (size_t i = 0; i < string->length; i++)
   {

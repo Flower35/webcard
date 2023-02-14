@@ -115,7 +115,7 @@ OSSpecific_validateTypesOfStreams(
 BOOL
 OSSpecific_peekStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ size_t * streamSize)
+  _Out_ size_t *streamSizeRef)
 {
   #if defined(_WIN32)
   {
@@ -137,7 +137,7 @@ OSSpecific_peekStream(
 
     if (test_bool)
     {
-      streamSize[0] = (size_t) pipe_length;
+      streamSizeRef[0] = (size_t) pipe_length;
     }
     #if defined(_DEBUG)
     else
@@ -176,7 +176,7 @@ OSSpecific_peekStream(
     {
       /* Polling timeout - ignore */
 
-      streamSize[0] = 0;
+      streamSizeRef[0] = 0;
       return TRUE;
     }
     else if (POLLIN & fds.revents)
@@ -194,7 +194,7 @@ OSSpecific_peekStream(
         return FALSE;
       }
 
-      streamSize[0] = (size_t) result;
+      streamSizeRef[0] = (size_t) result;
 
       return TRUE;
     }
@@ -224,7 +224,7 @@ OSSpecific_peekStream(
 BOOL
 OSSpecific_readBytesFromStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ LPVOID output,
+  _Out_ void *output,
   _In_ const size_t size)
 {
   #if defined(_WIN32)
@@ -286,7 +286,7 @@ OSSpecific_readBytesFromStream(
 BOOL
 OSSpecific_writeBytesToStream(
   _In_ const os_specific_stream_t stream,
-  _In_ LPCVOID input,
+  _In_ const void *input,
   _In_ const size_t size)
 {
   #if defined(_WIN32)

@@ -9,7 +9,7 @@
 
 VOID
 JsonPair_init(
-  _Out_ JsonPair pair)
+  _Out_ JsonPair *pair)
 {
   UTF8String_init(&(pair->key));
   JsonValue_init(&(pair->value));
@@ -19,7 +19,7 @@ JsonPair_init(
 
 VOID
 JsonPair_destroy(
-  _Inout_ JsonPair pair)
+  _Inout_ JsonPair *pair)
 {
   UTF8String_destroy(&(pair->key));
   JsonValue_destroy(&(pair->value));
@@ -29,8 +29,8 @@ JsonPair_destroy(
 
 BOOL
 JsonPair_copy(
-  _Out_ JsonPair destination,
-  _In_ ConstJsonPair source)
+  _Out_ JsonPair *destination,
+  _In_ const JsonPair *source)
 {
   JsonPair_init(destination);
 
@@ -46,15 +46,15 @@ JsonPair_copy(
 
 BOOL
 JsonPair_parse(
-  _Outptr_result_maybenull_ JsonPair * const result,
+  _Outptr_result_maybenull_ JsonPair **const result,
   _In_ BOOL allocate,
-  _Inout_ JsonByteStream stream)
+  _Inout_ JsonByteStream *stream)
 {
   BYTE test_byte;
 
   if (allocate)
   {
-    result[0] = malloc(sizeof(struct json_pair_t));
+    result[0] = malloc(sizeof(JsonPair));
     if (NULL == result[0]) { return FALSE; }
   }
   JsonPair_init(result[0]);
@@ -64,7 +64,7 @@ JsonPair_parse(
     return FALSE;
   }
 
-  UTF8String key_pointer = &(result[0]->key);
+  UTF8String *key_pointer = &(result[0]->key);
   if (!JsonString_parse(&(key_pointer), FALSE, stream))
   {
     return FALSE;
@@ -80,7 +80,7 @@ JsonPair_parse(
     return FALSE;
   }
 
-  JsonValue value_pointer = &(result[0]->value);
+  JsonValue *value_pointer = &(result[0]->value);
   return JsonValue_parse(&(value_pointer), FALSE, stream);
 }
 
@@ -88,8 +88,8 @@ JsonPair_parse(
 
 BOOL
 JsonPair_toString(
-  _In_ ConstJsonPair pair,
-  _Inout_ UTF8String output)
+  _In_ const JsonPair *pair,
+  _Inout_ UTF8String *output)
 {
   if (!JsonString_toString(&(pair->key), output))
   {
