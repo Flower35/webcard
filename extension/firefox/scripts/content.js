@@ -1,8 +1,7 @@
-// "Smart Card Extension (WebCard)": "content.js"
-
 /******************************************************************************/
+// "Smart Card Extension" (WebCard): "content.js"
 
-const webcardVersion = '0.3.1';
+const webcardVersion = '0.4.0';
 
 let backgroundPort;
 
@@ -11,46 +10,72 @@ banner.id = "webcard-install-banner";
 document.documentElement.appendChild(banner);
 
 /******************************************************************************/
+// Called when the [background port] processed
+// any [JSON message] from the [Native App].
+function backgroundPortCallback(msg)
+{
+    if (msg?.webcard === 'alert')
+    {
+        // Alert forwared from the [background script].
+        window.alert(msg.info);
+    }
 
-function SafeTargetOrigin() {
-  let href = window.location.href;
-  return href.startsWith('file://') ? '*' : href;
+    if (msg.e || msg.i)
+    {
+        if (msg.verNat)
+        {
+            // User requested for version check.
+            msg.verExt = webcardVersion;
+        }
+
+        // Bubble-up this message (event or response)
+        // to the webpage (browser tab).
+        msg.webcard = 'response';
+        window.postMessage(msg, window.location.origin);
+    }
 }
 
 /******************************************************************************/
-
-function backgroundPortOnMessage(msg) {
-  if (msg.webcard && (msg.webcard == 'alert')) {
-    window.alert(msg.info);
-  } else {
-    // Requested version check?
-    if (msg.verNat) {
-      msg.verExt = webcardVersion;
+// Called after any `window.postMessage()`
+// (originating either from the content script or the page scripts).
+function windowMessageCallback(event)
+{
+    // We want to only accept messages from ourselves
+    // (page script => content script).
+    if ((event.source !== window) ||
+        (event.origin !== window.location.origin) ||
+        (typeof event?.data?.webcard !== 'string'))
+    {
+        return;
     }
-    // Forward the response back to the a page script on some tab.
-    msg.webcard = 'response';
-    window.postMessage(msg, SafeTargetOrigin());
-  }
+
+    if (event.data.webcard === 'request')
+    {
+        if (!backgroundPort)
+        {
+            // This page is sending its first [webcard request].
+            // Connect with the [background script] once.
+            backgroundPort = browser.runtime.connect({ name: 'webcard' });
+            backgroundPort.onMessage.addListener(backgroundPortCallback);
+        }
+
+        delete event.data.webcard;
+        backgroundPort.postMessage(event.data);
+    }
 }
+
+window.addEventListener('message', windowMessageCallback, false);
 
 /******************************************************************************/
-
-function windowWebcardRequest(event) {
-  // Called after any `window.postMessage()` (content script, page scripts).
-  // We want to only accept messages from ourselves.
-  if (event.source != window) {
-    return;
-  }
-  if (event.data.webcard && (event.data.webcard == 'request')) {
-    if (!backgroundPort) {
-      backgroundPort = browser.runtime.connect({name: "webcard"});
-      backgroundPort.onMessage.addListener(backgroundPortOnMessage);
+// Called when user closes the tab associated with this content script.
+function windowUnloadCallback()
+{
+    if (backgroundPort)
+    {
+        backgroundPort.postMessage(undefined);
     }
-    delete event.data.webcard;
-    backgroundPort.postMessage(event.data);
-  }
 }
 
-window.addEventListener("message", windowWebcardRequest, false);
+window.addEventListener('unload', windowUnloadCallback, false);
 
 /******************************************************************************/

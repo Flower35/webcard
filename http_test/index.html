@@ -12,8 +12,6 @@
   <body onload="OnIndexLoad()">
     <div id="website">
       <h2 class="centered-text">WebCard: Smart Cards in your Web Browser</h2>
-      <!--p>WebCard enables a Web page to use locally connected smart cards.</p-->
-      <!--p>Enter some APDU commands and select a reader to test.</p-->
       <hr />
       <table><tr>
         <td>
@@ -35,7 +33,8 @@
       <h3 class="centered-text">Available Readers</h3>
       <table id="readers-table"></table>
       <br /><hr />
-      <input class="website-button" style="margin:0 auto;display:block;" type="button" value="Ping the Native App" onclick="PingPong()" />
+      <input class="website-button" style="margin:0 auto;display:block;" type="button" value="Ping the Native App" onclick="PingPong()" /><br />
+      <input class="website-button" style="margin:0 auto;display:block;" type="button" value="Refresh Readers List" onclick="ListReaders(true)" />
       <hr />
     </div>
   </body>
