@@ -127,22 +127,34 @@ SCardConnection_transceiveMultiple(
   _In_ const DWORD outputLength)
 {
   BOOL test_bool;
-  DWORD bytesReceived = outputLength;
-  DWORD *bytesReceivedRef = &(bytesReceived);
+  DWORD bytesReceived;
+
+  /*
+   * [0] CLA: 0x00
+   * [1] INS: 0xC0 (GET RESPONSE)
+   * [2] P1:  0x00
+   * [3] P2:  0x00
+   * [4] Lc:  Length-of-Data is undefined (depends on the APDU response)
+   * APDU END (No actual data follows the "GET RESPONSE" APDU)
+   */
   BYTE getResponseApdu[5] = {0x00, 0xC0, 0x00, 0x00};
+
+  /* Begin transmission */
+
+  bytesReceived = outputLength;
 
   test_bool = SCardConnection_transceiveSingle(
     connection,
     input,
     inputLength,
     output,
-    bytesReceivedRef);
+    &(bytesReceived));
 
   if (!test_bool) { return FALSE; }
 
   /* Check if "Status Word 1" is "Response bytes still available" */
 
-  while ((outputLength >= 2) && (0x61 == output[outputLength - 2]))
+  while ((bytesReceived >= 2) && (0x61 == output[bytesReceived - 2]))
   {
     test_bool = UTF8String_pushBytesAsHex(
       hexStringResult,
@@ -164,7 +176,7 @@ SCardConnection_transceiveMultiple(
       getResponseApdu,
       5,
       output,
-      bytesReceivedRef);
+      &(bytesReceived));
 
     if (!test_bool) { return FALSE; }
   }

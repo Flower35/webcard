@@ -21,12 +21,12 @@
         self.connected = undefined;
 
         self.connect = (shared) =>
-            navigator.webcard.send( 2, { r: self.index, p: shared ? 2 : 1 });
+            navigator.webcard.send(2, { r: self.index, p: shared ? 2 : 1 });
 
         self.disconnect = () =>
             navigator.webcard.send(3, { r: self.index });
 
-        self.transcieve = (apdu) =>
+        self.transceive = (apdu) =>
             navigator.webcard.send(4, { r: self.index, a: apdu });
     }
 
@@ -277,7 +277,7 @@
                     break;
                 }
 
-                // [Connect] and [Transcieve]
+                // [Connect] and [Transceive]
                 case 2: case 4:
                 {
                     if (msg.d)

@@ -4,3 +4,4 @@
 **/.dccache
 native/out/
 native/res/out/
+extension/**/*.zip

@@ -61,7 +61,7 @@ Each **`Reader`** has the following fields:
 
     * On success (fulfilled promise), returns the ATR of the inserted card.
 
-* **`transcieve(apdu: string): Promise`**
+* **`transceive(apdu: string): Promise`**
 
     * sends the APDU passed as a hexidecimal string.
 
@@ -171,7 +171,7 @@ These fields can be assigned with user-defined functions (*Native App event call
 
     * `3` => disconnect
 
-    * `4` => transcieve
+    * `4` => transceive
 
     * `10` => check version
 
@@ -287,7 +287,7 @@ These fields can be assigned with user-defined functions (*Native App event call
 
         * `i: string` => matches the request ID.
 
-* Command `4`: **Transcieve** (*connection must have been established*).
+* Command `4`: **Transceive** (*connection must have been established*).
 
     * Request (*transmit APDU*):
 

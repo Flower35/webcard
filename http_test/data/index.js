@@ -206,7 +206,7 @@ async function ListReaders(refresh)
 }
 
 /******************************************************************************/
-async function TestReader(index, connect, transcieve, disconnect)
+async function TestReader(index, connect, transceive, disconnect)
 {
     const startTime = performance.now();
     const startDate = new Date();
@@ -243,7 +243,7 @@ async function TestReader(index, connect, transcieve, disconnect)
         }
     }
 
-    if (!failed && transcieve)
+    if (!failed && transceive)
     {
         let apduList = apduListTextareaIn.value.match(/^[0-9A-Fa-f]+$/gm);
         if (apduList)
@@ -252,7 +252,7 @@ async function TestReader(index, connect, transcieve, disconnect)
             {
                 output += (`> ${apduList[i]}\n`);
 
-                await reader.transcieve(apduList[i])
+                await reader.transceive(apduList[i])
                     .then((response) =>
                     {
                         output += (`< ${response}\n\n`);
