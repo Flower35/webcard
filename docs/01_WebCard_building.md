@@ -49,7 +49,7 @@ Here is a list of required utilities:
 
 Instructions for selected Operating Systems.
 
-### **Microsoft Windows (32-bit and 64-bit)**
+### **Microsoft Windows** (*32-bit and 64-bit*)
 
 * **`MSYS2`** (*Software Distribution and Building Platform for Windows*) can be downloaded from: https://www.msys2.org/
 
@@ -75,7 +75,7 @@ Instructions for selected Operating Systems.
 
 * The **`WinSCard.dll`** library is already bundled with the **Windows** Operating System.
 
-### **Linux distributions (32-bit and 64-bit)**
+### **Linux** (*`Debian`-based distributions*) (*32-bit and 64-bit*)
 
 * Launch terminal (shell).
 
@@ -99,9 +99,11 @@ Instructions for selected Operating Systems.
         sudo perl -p -i.bak -e 's/#include <wintypes.h>/#include "wintypes.h"/g' /usr/include/PCSC/pcsclite.h
         ```
 
-### **macOS (Darwin)**
+### **macOS** (*Darwin*)
 
 * All required utilities (**`make`**, **`clang`** and **`PCSC lite`**) should be already bundled with the **macOS** (MacOS X) Operating System.
+
+    * If you are launching the development tools for the first time, you might be prompted to install the **`Xcode`** toolset.
 
 &nbsp;
 

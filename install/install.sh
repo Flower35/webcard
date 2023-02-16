@@ -1,6 +1,6 @@
 #!/bin/sh
 
-clear
+clear 2>/dev/null
 
 __="--------------------------------"
 
@@ -11,26 +11,44 @@ printf "%s\n" "${__}"
 ################################################################
 # Detect target OS and target CPU
 
-    SYSTEM_TYPE="$(uname -s)"
-    CPU="$(uname -m)"
+    SYSTEM_TYPE=`uname -s`
+    CPU=`uname -m`
 
     if [ "${SYSTEM_TYPE}" = "Darwin" ]
     then
         printf "Target OS: macOS X"
         HOST_OS="macOS"
 
-        TARGET_DIR_CHROME="${HOME}/Library/Application Support/Google/Chrome/NativeMessagingHosts"
-        TARGET_DIR_EDGE="${HOME}/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
         TARGET_DIR_FIREFOX="${HOME}/Library/Application Support/Mozilla/NativeMessagingHosts"
+        TARGET_DIR_CHROMIUM="${HOME}/Library/Application Support/Chromium/NativeMessagingHosts"
+        TARGET_DIR_GOOGLE_CHROME="${HOME}/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+        TARGET_DIR_MICROSOFT_EDGE="${HOME}/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
+
+        INSTALL_CHECK_BEGIN="[ -d"
+        INSTALL_CHECK_END="]"
+
+        APP_FIREFOX="/Applications/Firefox.app"
+        APP_CHROMIUM="/Applications/Chromium.app"
+        APP_GOOGLE_CHROME="/Applications/Google Chrome.app"
+        APP_MICROSOFT_EDGE="/Applications/Microsoft Edge.app"
 
     elif [ "${SYSTEM_TYPE}" = "Linux" ]
     then
         printf "Target OS: Linux"
         HOST_OS="linux"
 
-        TARGET_DIR_CHROME="${HOME}/.config/google-chrome/NativeMessagingHosts"
-        TARGET_DIR_EDGE="${HOME}/.config/microsoft-edge/NativeMessagingHosts"
         TARGET_DIR_FIREFOX="${HOME}/.mozilla/native-messaging-hosts"
+        TARGET_DIR_CHROMIUM="${HOME}/.config/chromium/NativeMessagingHosts"
+        TARGET_DIR_GOOGLE_CHROME="${HOME}/.config/google-chrome/NativeMessagingHosts"
+        TARGET_DIR_MICROSOFT_EDGE="${HOME}/.config/microsoft-edge/NativeMessagingHosts"
+
+        INSTALL_CHECK_BEGIN="which"
+        INSTALL_CHECK_END=""
+
+        APP_FIREFOX="firefox"
+        APP_CHROMIUM="chromium"
+        APP_GOOGLE_CHROME="google-chrome"
+        APP_MICROSOFT_EDGE="microsoft-edge"
 
     else
         printf "* Error: Unsupported Operating System \"%s\"!\n" "${SYSTEM_TYPE}"
@@ -70,91 +88,124 @@ printf "%s\n" "${__}"
     if [ ! -f "${APP_PATH}/${APP_NAME}" ]
     then
         printf "* Error: File \"%s\" not found!\n" "${APP_PATH}/${APP_NAME}"
-        printf "Please (re)build the Native App executable.\n"
+        printf " Please (re)build the Native App executable.\n"
         exit 1
     fi
 
     printf "* Native App found at \"%s\".\n" "${APP_PATH}/${APP_NAME}"
 
 ################################################################
-# Detecting "Google Chrome" Web Browser
+# Detecting supported Web Browsers
 
-    WEBCARD_CHROME=
+    AVAIL_FIREFOX=
 
-    if which google-chrome >/dev/null 2>&1
+    if ${INSTALL_CHECK_BEGIN} "${APP_FIREFOX}" ${INSTALL_CHECK_END} >/dev/null 2>&1
     then
-        if [ -f "ID_CHROME.txt" ]
-        then
-            ID_CHROME="$(cat \"ID_CHROME.txt\")"
+        printf "* \"Mozilla Firefox\" is available.\n"
+        AVAIL_FIREFOX="YES"
 
-            if [ ! -z "${ID_CHROME}" ]
-            then
-                printf "* \"Google Chrome\" is available.\n"
-                WEBCARD_CHROME="."
-
-            else
-                printf "* Warning: File \"ID_CHROME.txt\" is blank!\n"
-                printf "Please fill it with the extension identifier."
-            fi
-        else
-            printf "* Warning: File \"ID_CHROME.txt\" not found!\n"
-        fi
     else
-        printf "* Warning: \"Google Chrome\" is NOT installed!\n"
+        printf "* \"Mozilla Firefox\" is NOT installed!\n"
+    fi
+
+    AVAIL_CHROMIUM=
+
+    if ${INSTALL_CHECK_BEGIN} "${APP_CHROMIUM}" ${INSTALL_CHECK_END} >/dev/null 2>&1
+    then
+        printf "* \"Chromium\" is available.\n"
+        AVAIL_CHROMIUM="YES"
+
+    else
+        printf "* \"Chromium\" is NOT installed!\n"
+    fi
+
+    AVAIL_GOOGLE_CHROME=
+
+    if ${INSTALL_CHECK_BEGIN} "${APP_GOOGLE_CHROME}" ${INSTALL_CHECK_END} >/dev/null 2>&1
+    then
+        printf "* \"Google Chrome\" is available.\n"
+        AVAIL_GOOGLE_CHROME="YES"
+
+    else
+        printf "* \"Google Chrome\" is NOT installed!\n"
+    fi
+
+    AVAIL_MICROSOFT_EDGE=
+
+    if ${INSTALL_CHECK_BEGIN} "${APP_MICROSOFT_EDGE}" ${INSTALL_CHECK_END} >/dev/null 2>&1
+    then
+        printf "* \"Microsoft Edge\" is available.\n"
+        AVAIL_MICROSOFT_EDGE="YES"
+
+    else
+        printf "* \"Microsoft Edge\" is NOT installed!\n"
     fi
 
 ################################################################
-# Detecting "Microsoft Edge" Web Browser
+# Reading "Firefox" Extension ID
 
-    WEBCARD_EDGE=
+    # Blank space for words "Available" or "Selected "
+    SEL_FIREFOX="         "
 
-    if which microsoft-edge >/dev/null 2>&1
-    then
-        if [ -f "ID_EDGE.txt" ]
-        then
-            ID_EDGE="$(cat \"ID_EDGE.txt\")"
-
-            if [ ! -z "${ID_EDGE}" ]
-            then
-                printf "* \"Microsoft Edge\" is available.\n"
-                WEBCARD_EDGE="."
-
-            else
-                printf "* Warning: File \"ID_EDGE.txt\" is blank!\n"
-                printf "Please fill it with the extension identifier."
-            fi
-        else
-            printf "* Warning: File \"ID_EDGE.txt\" not found!\n"
-        fi
-    else
-        printf "* Warning: \"Microsoft Edge\" is NOT installed!\n"
-    fi
-
-################################################################
-# Detecting "Mozilla Firefox" Web Browser
-
-    WEBCARD_FIREFOX=
-
-    if which firefox >/dev/null 2>&1
+    if [ "YES" = "${AVAIL_FIREFOX}" ]
     then
         if [ -f "ID_FIREFOX.txt" ]
         then
-            ID_FIREFOX="$(cat \"ID_FIREFOX.txt\")"
+            ID_FIREFOX=`cat "ID_FIREFOX.txt"`
 
             if [ ! -z "${ID_FIREFOX}" ]
             then
-                printf "* \"Mozilla Firefox\" is available.\n"
-                WEBCARD_FIREFOX="."
+                SEL_FIREFOX="Available"
 
             else
                 printf "* Warning: File \"ID_FIREFOX.txt\" is blank!\n"
-                printf "Please fill it with the extension identifier."
+                printf " Please fill it with the extension identifier.\n"
             fi
         else
             printf "* Warning: File \"ID_FIREFOX.txt\" not found!\n"
         fi
-    else
-        printf "* Warning: \"Mozilla Firefox\" is NOT installed!\n"
+    fi
+
+################################################################
+# Reading "Chromium" Extension ID
+
+    # Blank space for words "Available" or "Selected "
+    SEL_CHROMIUM="         "
+    SEL_GOOGLE_CHROME="         "
+    SEL_MICROSOFT_EDGE="         "
+
+    if  [ "YES" = "${AVAIL_CHROMIUM}" ] ||\
+        [ "YES" = "${AVAIL_GOOGLE_CHROME}" ] ||\
+        [ "YES" = "${AVAIL_MICROSOFT_EDGE}" ]
+    then
+        if [ -f "ID_CHROMIUM.txt" ]
+        then
+            ID_CHROMIUM=`cat "ID_CHROMIUM.txt"`
+
+            if [ ! -z "${ID_CHROMIUM}" ]
+            then
+                if  [ "YES" = "${AVAIL_CHROMIUM}" ]
+                then
+                    SEL_CHROMIUM="Available"
+                fi
+
+                if  [ "YES" = "${AVAIL_GOOGLE_CHROME}" ]
+                then
+                    SEL_GOOGLE_CHROME="Available"
+                fi
+
+                if  [ "YES" = "${AVAIL_MICROSOFT_EDGE}" ]
+                then
+                    SEL_MICROSOFT_EDGE="Available"
+                fi
+
+            else
+                printf "* Warning: File \"ID_CHROMIUM.txt\" is blank!\n"
+                printf " Please fill it with the extension identifier.\n"
+            fi
+        else
+            printf "* Warning: File \"ID_CHROMIUM.txt\" not found!\n"
+        fi
     fi
 
 ################################################################
@@ -164,80 +215,74 @@ printf "%s\n" "${__}"
     printf "(press Enter to continue)\n"
     read -r _
 
-    # Changing unset variables to blanks (single whitespace)
-
-    if [ -z "${WEBCARD_CHROME}" ]
-    then
-        WEBCARD_CHROME=" "
-    fi
-
-    if [ -z "${WEBCARD_EDGE}" ]
-    then
-        WEBCARD_EDGE=" "
-    fi
-
-    if [ -z "${WEBCARD_FIREFOX}" ]
-    then
-        WEBCARD_FIREFOX=" "
-    fi
-
     CHOICE=
 
     while [ -z "${CHOICE}" ]
     do
-        clear
+        clear 2>/dev/null
 
         printf "%s\n" "${__}"
         printf "Select Web Browsers\n"
         printf "%s\n" "${__}"
-        printf "1: [%s] Google Chrome\n" "${WEBCARD_CHROME}"
-        printf "2: [%s] Microsoft Edge\n" "${WEBCARD_EDGE}"
-        printf "3: [%s] Mozilla Firefox\n" "${WEBCARD_FIREFOX}"
-        printf "%s\nLEGEND:\n" "${__}"
-        printf "  [ ] = browser unavailable\n"
-        printf "  [.] = browser available, but not selected\n"
-        printf "  [O] = browser selected\n"
+        printf "1: [ %s ] \"Mozilla Firefox\"\n" "${SEL_FIREFOX}"
+        printf "2: [ %s ] \"Chromium\"\n" "${SEL_CHROMIUM}"
+        printf "3: [ %s ] \"Google Chrome\"\n" "${SEL_GOOGLE_CHROME}"
+        printf "4: [ %s ] \"Microsoft Edge\"\n" "${SEL_MICROSOFT_EDGE}"
         printf "%s\n" "${__}"
 
         CHOICE=
-        printf "Type a number (or leave blank) and press ENTER:\n"
+        printf "Type a SINGLE number (or leave a blank choice\n"
+        printf " to continue), then press ENTER: "
         read -r CHOICE
 
         if [ "1" = "${CHOICE}" ]
         then
-            if [ "." = "${WEBCARD_CHROME}" ]
+            if [ "Available" = "${SEL_FIREFOX}" ]
             then
-                WEBCARD_CHROME="O"
+                SEL_FIREFOX="Selected "
 
-            elif [ "O" = "${WEBCARD_CHROME}" ]
+            elif [ "Selected " = "${SEL_FIREFOX}" ]
             then
-                WEBCARD_CHROME="."
+                SEL_FIREFOX="Available"
             fi
 
             CHOICE=
 
         elif [ "2" = "${CHOICE}" ]
         then
-            if [ "." = "${WEBCARD_EDGE}" ]
+            if [ "Available" = "${SEL_CHROMIUM}" ]
             then
-                WEBCARD_EDGE="O"
+                SEL_CHROMIUM="Selected "
 
-            elif [ "O" = "${WEBCARD_EDGE}" ]
+            elif [ "Selected " = "${SEL_CHROMIUM}" ]
             then
-                WEBCARD_EDGE="."
+                SEL_CHROMIUM="Available"
             fi
 
             CHOICE=
 
         elif [ "3" = "${CHOICE}" ]
         then
-            if [ "." = "${WEBCARD_FIREFOX}" ]
+            if [ "Available" = "${SEL_GOOGLE_CHROME}" ]
             then
-                WEBCARD_FIREFOX="O"
+                SEL_GOOGLE_CHROME="Selected "
 
-            elif [ "O" = "${WEBCARD_FIREFOX}" ]
+            elif [ "Selected " = "${SEL_GOOGLE_CHROME}" ]
             then
-                WEBCARD_FIREFOX="."
+                SEL_GOOGLE_CHROME="Available"
+            fi
+
+            CHOICE=
+
+        elif [ "4" = "${CHOICE}" ]
+        then
+            if [ "Available" = "${SEL_MICROSOFT_EDGE}" ]
+            then
+                SEL_MICROSOFT_EDGE="Selected "
+
+            elif [ "Selected " = "${SEL_MICROSOFT_EDGE}" ]
+            then
+                SEL_MICROSOFT_EDGE="Available"
             fi
 
             CHOICE=
@@ -252,7 +297,7 @@ printf "%s\n" "${__}"
 ################################################################
 # Copying "Native messaging application"
 
-    clear
+    clear 2>/dev/null
 
     printf "%s\n" "${__}"
     printf "* Asserting that the destination directory exists...\n"
@@ -264,6 +309,7 @@ printf "%s\n" "${__}"
 
     printf "OK\n"
 
+    printf "%s\n" "${__}"
     printf "* Copying \"%s\"...\n" "${APP_NAME}"
 
     if ! cp "${APP_PATH}/${APP_NAME}" "${TARGET_PATH}/${APP_NAME}"
@@ -276,55 +322,10 @@ printf "%s\n" "${__}"
 ################################################################
 # Generating "Native messaging host manifest" (JSON files)
 
-    if [ "O" = "${WEBCARD_CHROME}" ]
-    then
-        JSON_FILE="${TARGET_DIR_CHROME}/${HOST_NAME}.json"
-        printf "* Generating \"Native messaging host manifest\" (Google Chrome)...\n"
-
-        if ! mkdir -p "${TARGET_DIR_CHROME}"
-        then
-            exit 1
-        fi
-
-        printf "{\n" >"${JSON_FILE}"
-        printf "    \"name\": \"%s\",\n" "${HOST_NAME}" >>"${JSON_FILE}"
-        printf "    \"description\": \"WebCard Native Helper App\",\n" >>"${JSON_FILE}"
-        printf "    \"path\": \"%s\",\n" "${TARGET_PATH}/${APP_NAME}" >>"${JSON_FILE}"
-        printf "    \"type\": \"stdio\",\n" >>"${JSON_FILE}"
-        printf "    \"allowed_origins\": [\n" >>"${JSON_FILE}"
-        printf "        \"chrome-extension://%s/\"\n" "${ID_CHROME}" >>"${JSON_FILE}"
-        printf "    ]\n" >>"${JSON_FILE}"
-        printf "}\n" >>"${JSON_FILE}"
-
-        printf "OK\n"
-    fi
-
-    if [ "O" = "${WEBCARD_EDGE}" ]
-    then
-        JSON_FILE="${TARGET_DIR_EDGE}/${HOST_NAME}.json"
-        printf "* Generating \"Native messaging host manifest\" (Microsoft Edge)...\n"
-
-        if ! mkdir -p "${TARGET_DIR_EDGE}"
-        then
-            exit 1
-        fi
-
-        printf "{\n" >"${JSON_FILE}"
-        printf "    \"name\": \"%s\",\n" "${HOST_NAME}" >>"${JSON_FILE}"
-        printf "    \"description\": \"WebCard Native Helper App\",\n" >>"${JSON_FILE}"
-        printf "    \"path\": \"%s\",\n" "${TARGET_PATH}/${APP_NAME}" >>"${JSON_FILE}"
-        printf "    \"type\": \"stdio\",\n" >>"${JSON_FILE}"
-        printf "    \"allowed_origins\": [\n" >>"${JSON_FILE}"
-        printf "        \"chrome-extension://%s/\"\n" "${ID_EDGE}" >>"${JSON_FILE}"
-        printf "    ]\n" >>"${JSON_FILE}"
-        printf "}\n" >>"${JSON_FILE}"
-
-        printf "OK\n"
-    fi
-
-    if [ "O" = "${WEBCARD_FIREFOX}" ]
+    if [ "Selected " = "${SEL_FIREFOX}" ]
     then
         JSON_FILE="${TARGET_DIR_FIREFOX}/${HOST_NAME}.json"
+        printf "%s\n" "${__}"
         printf "* Generating \"Native messaging host manifest\" (Mozilla Firefox)...\n"
 
         if ! mkdir -p "${TARGET_DIR_FIREFOX}"
@@ -345,6 +346,78 @@ printf "%s\n" "${__}"
         printf "OK\n"
     fi
 
+    if [ "Selected " = "${SEL_CHROMIUM}" ]
+    then
+        JSON_FILE="${TARGET_DIR_CHROMIUM}/${HOST_NAME}.json"
+        printf "%s\n" "${__}"
+        printf "* Generating \"Native messaging host manifest\" (Chromium)...\n"
+
+        if ! mkdir -p "${TARGET_DIR_CHROMIUM}"
+        then
+            exit 1
+        fi
+
+        printf "{\n" >"${JSON_FILE}"
+        printf "    \"name\": \"%s\",\n" "${HOST_NAME}" >>"${JSON_FILE}"
+        printf "    \"description\": \"WebCard Native Helper App\",\n" >>"${JSON_FILE}"
+        printf "    \"path\": \"%s\",\n" "${TARGET_PATH}/${APP_NAME}" >>"${JSON_FILE}"
+        printf "    \"type\": \"stdio\",\n" >>"${JSON_FILE}"
+        printf "    \"allowed_origins\": [\n" >>"${JSON_FILE}"
+        printf "        \"chrome-extension://%s/\"\n" "${ID_CHROMIUM}" >>"${JSON_FILE}"
+        printf "    ]\n" >>"${JSON_FILE}"
+        printf "}\n" >>"${JSON_FILE}"
+
+        printf "OK\n"
+    fi
+
+    if [ "Selected " = "${SEL_GOOGLE_CHROME}" ]
+    then
+        JSON_FILE="${TARGET_DIR_GOOGLE_CHROME}/${HOST_NAME}.json"
+        printf "%s\n" "${__}"
+        printf "* Generating \"Native messaging host manifest\" (Google Chrome)...\n"
+
+        if ! mkdir -p "${TARGET_DIR_GOOGLE_CHROME}"
+        then
+            exit 1
+        fi
+
+        printf "{\n" >"${JSON_FILE}"
+        printf "    \"name\": \"%s\",\n" "${HOST_NAME}" >>"${JSON_FILE}"
+        printf "    \"description\": \"WebCard Native Helper App\",\n" >>"${JSON_FILE}"
+        printf "    \"path\": \"%s\",\n" "${TARGET_PATH}/${APP_NAME}" >>"${JSON_FILE}"
+        printf "    \"type\": \"stdio\",\n" >>"${JSON_FILE}"
+        printf "    \"allowed_origins\": [\n" >>"${JSON_FILE}"
+        printf "        \"chrome-extension://%s/\"\n" "${ID_CHROMIUM}" >>"${JSON_FILE}"
+        printf "    ]\n" >>"${JSON_FILE}"
+        printf "}\n" >>"${JSON_FILE}"
+
+        printf "OK\n"
+    fi
+
+    if [ "Selected " = "${SEL_MICROSOFT_EDGE}" ]
+    then
+        JSON_FILE="${TARGET_DIR_MICROSOFT_EDGE}/${HOST_NAME}.json"
+        printf "%s\n" "${__}"
+        printf "* Generating \"Native messaging host manifest\" (Microsoft Edge)...\n"
+
+        if ! mkdir -p "${TARGET_DIR_MICROSOFT_EDGE}"
+        then
+            exit 1
+        fi
+
+        printf "{\n" >"${JSON_FILE}"
+        printf "    \"name\": \"%s\",\n" "${HOST_NAME}" >>"${JSON_FILE}"
+        printf "    \"description\": \"WebCard Native Helper App\",\n" >>"${JSON_FILE}"
+        printf "    \"path\": \"%s\",\n" "${TARGET_PATH}/${APP_NAME}" >>"${JSON_FILE}"
+        printf "    \"type\": \"stdio\",\n" >>"${JSON_FILE}"
+        printf "    \"allowed_origins\": [\n" >>"${JSON_FILE}"
+        printf "        \"chrome-extension://%s/\"\n" "${ID_CHROMIUM}" >>"${JSON_FILE}"
+        printf "    ]\n" >>"${JSON_FILE}"
+        printf "}\n" >>"${JSON_FILE}"
+
+        printf "OK\n"
+    fi
+
 ################################################################
 # Installation Success
 
@@ -352,7 +425,7 @@ printf "%s\n" "${__}"
     printf "Installation Success! (press Any Key to exit)\n"
 
     read -r _
-
+    clear 2>/dev/null
     exit 0
 
 ################################################################

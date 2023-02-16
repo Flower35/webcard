@@ -9,11 +9,13 @@
 
 * Install a ***Web Browser*** of your choice. Currently supported Web Browsers are:
 
+    * **Mozilla Firefox**
+
+    * **Chromium**
+
     * **Google Chrome**
 
     * **Microsoft Edge**
-
-    * **Mozilla Firefox**
 
 * Build the ***Native Messaging Helper Application***.
 
@@ -27,7 +29,7 @@
 
 This development version requires manual installation of the unpacked extension.
 
-### **Google Chrome**
+### **Chromium** & **Google Chrome**
 
 * Navigate to **`chrome://extensions`**.
 
@@ -41,7 +43,7 @@ This development version requires manual installation of the unpacked extension.
 
     * In a case when you can't see the whole value, click on the **`[Details]`** button.
 
-* Open the **`install/ID_CHROME.txt`** text file in a notepad, paste the 32-character ID, save changes.
+* Open the **`install/ID_CHROMIUM.txt`** text file in a notepad, paste the 32-character ID, save changes.
 
 ### **Microsoft Edge**
 
@@ -57,7 +59,7 @@ This development version requires manual installation of the unpacked extension.
 
     * In a case when you can't see the whole value, click on the **`[Details]`** button.
 
-* Open the **`install/ID_EDGE.txt`** text file in a notepad, paste the 32-character ID, save changes.
+* Open the **`install/ID_CHROMIUM.txt`** text file in a notepad, paste the 32-character ID, save changes.
 
 ### **Mozilla Firefox**
 
@@ -104,6 +106,7 @@ This development version requires manual installation of the unpacked extension.
     * on **Linux** and **macOS**:
 
         ```
+        chmod u+x install.sh
         ./install.sh
         ```
 
