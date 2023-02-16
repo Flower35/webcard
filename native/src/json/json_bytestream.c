@@ -13,7 +13,7 @@ JsonByteStream_loadFromStandardInput(
 {
   BOOL test_bool;
   os_specific_stream_t stdin_stream;
-  size_t pipe_length;
+  DWORD pipe_length;
   uint32_t json_length;
 
   /* Get Standard Input stream identifier */
@@ -68,7 +68,10 @@ JsonByteStream_loadFromStandardInput(
   }
 
   #if defined(_DEBUG)
-    OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} 0x%04X/0x%04X bytes on STDIN", json_length, pipe_length);
+    OSSpecific_writeDebugMessage(
+      "{JsonByteStream} 0x%04X/0x%04X bytes on STDIN",
+      json_length,
+      pipe_length);
   #endif
 
   /* Validate given text length */
@@ -95,7 +98,9 @@ JsonByteStream_loadFromStandardInput(
       while (0 == pipe_length);
 
       #if defined(_DEBUG)
-        OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} 0x%04X bytes on STDIN", pipe_length);
+        OSSpecific_writeDebugMessage(
+          "{JsonByteStream} 0x%04X bytes on STDIN",
+          pipe_length);
       #endif
 
       test_bool = (json_length <= pipe_length);
@@ -104,7 +109,8 @@ JsonByteStream_loadFromStandardInput(
     if (!test_bool)
     {
       #if defined(_DEBUG)
-        OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} invalid stream length!");
+        OSSpecific_writeDebugMessage(
+          "{JsonByteStream::loadFromStandardInput} invalid stream length!");
       #endif
 
       return JSON_STREAM_STATUS__NO_MORE;
@@ -117,7 +123,8 @@ JsonByteStream_loadFromStandardInput(
   if (NULL == (stream->head))
   {
     #if defined(_DEBUG)
-      OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} memory allocation failed!");
+      OSSpecific_writeDebugMessage(
+        "{JsonByteStream::loadFromStandardInput} memory allocation failed!");
     #endif
 
     return JSON_STREAM_STATUS__NO_MORE;
@@ -142,7 +149,7 @@ JsonByteStream_loadFromStandardInput(
     UTF8String hexdump;
     UTF8String_init(&(hexdump));
     UTF8String_pushBytesAsHex(&(hexdump), json_length, stream->head);
-    OSSpecific_writeDebugMessage("{JsonByteStream::loadFromStandardInput} hex-dump: %s", (LPCSTR) hexdump.text);
+    OSSpecific_writeDebugMessage("{JsonByteStream} hex-dump: %s", (LPCSTR) hexdump.text);
     UTF8String_destroy(&(hexdump));
   #endif
 
@@ -182,7 +189,7 @@ JsonByteStream_peek(
 
   #if defined(_DEBUG)
   OSSpecific_writeDebugMessage(
-    "JSON byte stream, peek failed: no more bytes");
+    "{JsonByteStream} peek failed: no more bytes");
   #endif
 
   return FALSE;
@@ -211,7 +218,7 @@ JsonByteStream_read(
   {
     #if defined(_DEBUG)
     OSSpecific_writeDebugMessage(
-      "JSON byte stream, read failed: no more bytes");
+      "{JsonByteStream} read failed: no more bytes");
     #endif
 
     return FALSE;

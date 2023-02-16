@@ -20,7 +20,7 @@
 
 #elif defined(__APPLE__)
   #include "os_specific/wtypes_for_unix.h"
-  #include <PCSC/PCSC.h>
+  #include <PCSC/musclecard.h>
   #define SCARD_READERSTATE SCARD_READERSTATE_A
   #define LPSCARD_READERSTATE LPSCARD_READERSTATE_A
 

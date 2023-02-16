@@ -139,7 +139,7 @@ OSSpecific_validateTypesOfStreams(
 extern BOOL
 OSSpecific_peekStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ size_t *streamSizeRef);
+  _Out_ DWORD *streamSizeRef);
 
 /**
  * @brief Reads bytes from a stream.

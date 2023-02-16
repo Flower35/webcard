@@ -115,7 +115,7 @@ OSSpecific_validateTypesOfStreams(
 BOOL
 OSSpecific_peekStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ size_t *streamSizeRef)
+  _Out_ DWORD *streamSizeRef)
 {
   #if defined(_WIN32)
   {
@@ -137,7 +137,7 @@ OSSpecific_peekStream(
 
     if (test_bool)
     {
-      streamSizeRef[0] = (size_t) pipe_length;
+      streamSizeRef[0] = pipe_length;
     }
     #if defined(_DEBUG)
     else
@@ -179,36 +179,45 @@ OSSpecific_peekStream(
       streamSizeRef[0] = 0;
       return TRUE;
     }
-    else if (POLLIN & fds.revents)
+    else
     {
-      /* There is data to read - peek amount of available bytes */
+      #if defined(_DEBUG)
+      OSSpecific_writeDebugMessage(
+        "{poll} POLLIN=%d POLLHUP=%d",
+        !!(POLLIN & fds.revents),
+        !!(POLLHUP & fds.revents));
+      #endif
 
-      if ((-1) == ioctl(stream, FIONREAD, &(result)))
+      if (POLLHUP & fds.revents)
       {
-        #if defined(_DEBUG)
-        OSSpecific_writeDebugMessage(
-          "{ioctl} failed: errno=0x%08X",
-          errno);
-        #endif
+        /* Writing end of the pipe was closed */
+
+        /* "macOS" always sends both `(POLLIN | POLLHUP)`,      */
+        /*  so we must prioritize `POLLHUP` check, even if      */
+        /*  that would drop one or two final WebCard responses. */
 
         return FALSE;
       }
+      else if (POLLIN & fds.revents)
+      {
+        /* There is data to read - peek amount of available bytes */
 
-      streamSizeRef[0] = (size_t) result;
+        if ((-1) == ioctl(stream, FIONREAD, &(result)))
+        {
+          #if defined(_DEBUG)
+          OSSpecific_writeDebugMessage(
+            "{ioctl} failed: errno=0x%08X",
+            errno);
+          #endif
 
-      return TRUE;
+          return FALSE;
+        }
+
+        streamSizeRef[0] = (DWORD) result;
+
+        return TRUE;
+      }
     }
-    #if defined(_DEBUG)
-    else if (POLLHUP & fds.revents)
-    {
-      /* Writing end of the pipe was closed */
-
-      OSSpecific_writeDebugMessage(
-        "{poll} failed: Hung up");
-    }
-    #endif
-
-    /* @bug: This code is never reached on "macOS X"! */
 
     return FALSE;
   }
