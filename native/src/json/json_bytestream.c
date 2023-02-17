@@ -13,7 +13,7 @@ JsonByteStream_loadFromStandardInput(
 {
   BOOL test_bool;
   os_specific_stream_t stdin_stream;
-  DWORD pipe_length;
+  uint32_t pipe_length;
   uint32_t json_length;
 
   /* Get Standard Input stream identifier */

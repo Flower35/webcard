@@ -71,7 +71,7 @@ JsonValue_copy(
   _Out_ JsonValue *destination,
   _In_ const JsonValue *source)
 {
-  size_t bytesize;
+  size_t byteSize;
 
   /* Copy the JsonValue type field */
 
@@ -83,22 +83,22 @@ JsonValue_copy(
   {
     case JSON_VALUE_TYPE__STRING:
     {
-      bytesize = sizeof(UTF8String);
+      byteSize = sizeof(UTF8String);
       break;
     }
     case JSON_VALUE_TYPE__NUMBER:
     {
-      bytesize = sizeof(FLOAT);
+      byteSize = sizeof(FLOAT);
       break;
     }
     case JSON_VALUE_TYPE__OBJECT:
     {
-      bytesize = sizeof(JsonObject);
+      byteSize = sizeof(JsonObject);
       break;
     }
     case JSON_VALUE_TYPE__ARRAY:
     {
-      bytesize = sizeof(JsonArray);
+      byteSize = sizeof(JsonArray);
       break;
     }
     default:
@@ -110,7 +110,7 @@ JsonValue_copy(
 
   /* Allocate memory for an object to be cloned */
 
-  destination->value = malloc(bytesize);
+  destination->value = malloc(byteSize);
   if (NULL == destination->value) { return FALSE; }
 
   /* `destination->value` points to an UNINITIALIZED object of given type */

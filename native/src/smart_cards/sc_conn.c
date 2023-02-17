@@ -23,14 +23,14 @@ SCardConnection_open(
   _Inout_ SCardConnection *connection,
   _In_ const SCARDCONTEXT context,
   _In_ LPCTSTR readerName,
-  _In_ const DWORD shareMode)
+  _In_ const PCSC_DWORD shareMode)
 {
   if (0 != connection->handle)
   {
     return TRUE;
   }
 
-  LONG result = SCardConnect(
+  PCSC_LONG pcscResult = SCardConnect(
     context,
     readerName,
     shareMode,
@@ -40,14 +40,14 @@ SCardConnection_open(
     &(connection->handle),
     &(connection->activeProtocol));
 
-  if (SCARD_S_SUCCESS != result)
+  if (SCARD_S_SUCCESS != pcscResult)
   {
     #if defined(_DEBUG)
     {
       OSSpecific_writeDebugMessage(
         "{SCardConnect} failed: 0x%08X (%s)",
-        (uint32_t) result,
-        WebCard_errorLookup(result));
+        (uint32_t) pcscResult,
+        WebCard_errorLookup(pcscResult));
     }
     #endif
 
@@ -68,13 +68,13 @@ SCardConnection_close(
     return TRUE;
   }
 
-  LONG result = SCardDisconnect(
+  PCSC_LONG pcscResult = SCardDisconnect(
     connection->handle,
     SCARD_LEAVE_CARD);
 
   connection->handle = 0;
 
-  return (SCARD_S_SUCCESS == result);
+  return (SCARD_S_SUCCESS == pcscResult);
 }
 
 /**************************************************************/
@@ -83,11 +83,11 @@ BOOL
 SCardConnection_transceiveSingle(
   _In_ const SCardConnection *connection,
   _In_ const BYTE *input,
-  _In_ const DWORD inputLength,
+  _In_ const PCSC_DWORD inputLength,
   _Out_ BYTE *output,
-  _Inout_ DWORD *outputLengthRef)
+  _Inout_ PCSC_DWORD *outputLengthRef)
 {
-  LONG result = SCardTransmit(
+  PCSC_LONG pcscResult = SCardTransmit(
     connection->handle,
     (SCARD_PROTOCOL_T0 == connection->activeProtocol) ?
       SCARD_PCI_T0 :
@@ -98,14 +98,14 @@ SCardConnection_transceiveSingle(
     output,
     outputLengthRef);
 
-  if (SCARD_S_SUCCESS != result)
+  if (SCARD_S_SUCCESS != pcscResult)
   {
     #if defined(_DEBUG)
     {
       OSSpecific_writeDebugMessage(
         "{SCardTransmit} failed: 0x%08X (%s)",
-        (uint32_t) result,
-        WebCard_errorLookup(result));
+        (uint32_t) pcscResult,
+        WebCard_errorLookup(pcscResult));
     }
     #endif
 
@@ -122,12 +122,12 @@ SCardConnection_transceiveMultiple(
   _In_ const SCardConnection *connection,
   _Inout_ UTF8String *hexStringResult,
   _In_ const BYTE *input,
-  _In_ const DWORD inputLength,
+  _In_ const PCSC_DWORD inputLength,
   _Out_ LPBYTE output,
-  _In_ const DWORD outputLength)
+  _In_ const PCSC_DWORD outputLength)
 {
   BOOL test_bool;
-  DWORD bytesReceived;
+  PCSC_DWORD bytesReceived;
 
   /*
    * [0] CLA: 0x00

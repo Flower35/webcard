@@ -85,12 +85,14 @@
 /** Checking error codes when standard functions fail. */
 #include <errno.h>
 
+/** Windows Data Types. */
+#include "wtypes_for_unix.h"
+
 #if defined(_WIN32)
   typedef HANDLE os_specific_stream_t;
 
 #elif defined(__linux__) || defined(__APPLE__)
   typedef int os_specific_stream_t;
-  #include "wtypes_for_unix.h"
 
 #endif
 
@@ -139,7 +141,7 @@ OSSpecific_validateTypesOfStreams(
 extern BOOL
 OSSpecific_peekStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ DWORD *streamSizeRef);
+  _Out_ uint32_t *streamSizeRef);
 
 /**
  * @brief Reads bytes from a stream.

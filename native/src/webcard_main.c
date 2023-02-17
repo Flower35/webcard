@@ -50,15 +50,53 @@ main(void)
   }
 
   #if defined(_DEBUG)
-  OSSpecific_writeDebugMessage(
-    "Starting {WebCard Native App}");
+  {
+    OSSpecific_writeDebugMessage(
+      "Starting {WebCard Native App}");
+
+    volatile BOOL debuggerAttached = FALSE;
+
+    #if defined(_WIN32)
+    {
+      MessageBoxW(
+        NULL,
+        L"WebCard Debugging Session started...\n\n" \
+          L"Attach a debugger of your choice NOW! :)",
+        L"{ WebCard Native App Debugging }",
+        MB_ICONINFORMATION);
+    }
+    #elif defined (__linux__)
+    {
+      system(
+        "notify-send" \
+        " -i \"dialog-information\"" \
+        " -t 5000" \
+        " \"{ WebCard Native App Debugging }\"" \
+        " \"WebCard Debugging Session started...\\n\\n" \
+          "Attach a debugger (gdb) NOW! :)\"");
+    }
+    #elif defined (__APPLE__)
+    {
+      system(
+        "osascript -e 'display notification" \
+        " \"WebCard Debugging Session started...\\n\\n" \
+          "Attach a debugger (lldb) NOW! :)\"" \
+        " with title \"{ WebCard Native App Debugging }\"'");
+    }
+    #endif
+
+    while (!debuggerAttached)
+    {}
+  }
   #endif
 
   WebCard_run();
 
   #if defined(_DEBUG)
-  OSSpecific_writeDebugMessage(
-    "{ WebCard Native App } shutting down");
+  {
+    OSSpecific_writeDebugMessage(
+      "{ WebCard Native App } shutting down");
+  }
   #endif
 
   return EXIT_SUCCESS;

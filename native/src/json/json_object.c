@@ -47,12 +47,12 @@ JsonObject_copy(
   }
 
   const size_t capacity = Misc_nextPowerOfTwo(source->count - 1);
-  const size_t bytesize = sizeof(JsonPair) * capacity;
+  const size_t byteSize = sizeof(JsonPair) * capacity;
 
   destination->count = 0;
   destination->capacity = capacity;
 
-  destination->pairs = malloc(bytesize);
+  destination->pairs = malloc(byteSize);
   if (NULL == destination->pairs) { return FALSE; }
 
   for (size_t i = 0; i < source->count; i++)
@@ -72,18 +72,18 @@ JsonObject_appendPair(
   _Inout_ JsonObject *object,
   _In_ const JsonPair *pair)
 {
-  size_t new_capacity = (object->count + 1);
+  size_t newCapacity = (object->count + 1);
 
-  if (new_capacity > object->capacity)
+  if (newCapacity > object->capacity)
   {
-    new_capacity = Misc_nextPowerOfTwo(new_capacity - 1);
+    newCapacity = Misc_nextPowerOfTwo(newCapacity - 1);
 
-    const size_t new_bytesize = sizeof(JsonPair) * new_capacity;
-    JsonPair *new_pairs = realloc(object->pairs, new_bytesize);
-    if (NULL == new_pairs) { return FALSE; }
+    const size_t newByteSize = sizeof(JsonPair) * newCapacity;
+    JsonPair *newPairs = realloc(object->pairs, newByteSize);
+    if (NULL == newPairs) { return FALSE; }
 
-    object->pairs = new_pairs;
-    object->capacity = new_capacity;
+    object->pairs = newPairs;
+    object->capacity = newCapacity;
   }
 
   BOOL test_bool = JsonPair_copy(

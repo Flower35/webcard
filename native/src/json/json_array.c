@@ -47,12 +47,12 @@ JsonArray_copy(
   }
 
   const size_t capacity = Misc_nextPowerOfTwo(source->count - 1);
-  const size_t bytesize = sizeof(JsonValue) * capacity;
+  const size_t byteSize = sizeof(JsonValue) * capacity;
 
   destination->count = 0;
   destination->capacity = capacity;
 
-  destination->values = malloc(bytesize);
+  destination->values = malloc(byteSize);
   if (NULL == destination->values) { return FALSE; }
 
   for (size_t i = 0; i < source->count; i++)
@@ -72,18 +72,18 @@ JsonArray_append(
   _Inout_ JsonArray *array,
   _In_ const JsonValue *value)
 {
-  size_t new_capacity = (array->count + 1);
+  size_t newCapacity = (array->count + 1);
 
-  if (new_capacity > array->capacity)
+  if (newCapacity > array->capacity)
   {
-    new_capacity = Misc_nextPowerOfTwo(new_capacity - 1);
+    newCapacity = Misc_nextPowerOfTwo(newCapacity - 1);
 
-    const size_t new_bytesize = sizeof(JsonValue) * new_capacity;
-    JsonValue *new_values = realloc(array->values, new_bytesize);
-    if (NULL == new_values) { return FALSE; }
+    const size_t newByteSize = sizeof(JsonValue) * newCapacity;
+    JsonValue *newValues = realloc(array->values, newByteSize);
+    if (NULL == newValues) { return FALSE; }
 
-    array->values = new_values;
-    array->capacity = new_capacity;
+    array->values = newValues;
+    array->capacity = newCapacity;
   }
 
   BOOL test_bool = JsonValue_copy(

@@ -45,18 +45,18 @@ UTF8String_assertCapacity(
   _Inout_ UTF8String *string,
   _In_ const size_t additionalLength)
 {
-  size_t new_capacity = string->length + additionalLength + 1;
+  size_t newCapacity = string->length + additionalLength + 1;
 
-  if (new_capacity > string->capacity)
+  if (newCapacity > string->capacity)
   {
-    new_capacity = Misc_nextPowerOfTwo(new_capacity - 1);
+    newCapacity = Misc_nextPowerOfTwo(newCapacity - 1);
 
-    const size_t new_bytesize = sizeof(BYTE) * new_capacity;
-    LPBYTE new_text = realloc(string->text, new_bytesize);
-    if (NULL == new_text) { return FALSE; }
+    const size_t newByteSize = sizeof(BYTE) * newCapacity;
+    LPBYTE newText = realloc(string->text, newByteSize);
+    if (NULL == newText) { return FALSE; }
 
-    string->text = new_text;
-    string->capacity = new_capacity;
+    string->text = newText;
+    string->capacity = newCapacity;
   }
 
   return TRUE;
@@ -76,16 +76,16 @@ UTF8String_copy(
   }
 
   const size_t capacity = Misc_nextPowerOfTwo(source->length);
-  const size_t min_bytesize = sizeof(BYTE) * (1 + source->length);
-  const size_t max_bytesize = sizeof(BYTE) * capacity;
+  const size_t minByteSize = sizeof(BYTE) * (1 + source->length);
+  const size_t maxByteSize = sizeof(BYTE) * capacity;
 
   destination->length = source->length;
   destination->capacity = capacity;
 
-  destination->text = malloc(max_bytesize);
+  destination->text = malloc(maxByteSize);
   if (NULL == destination->text) { return FALSE; }
 
-  memcpy(destination->text, source->text, min_bytesize);
+  memcpy(destination->text, source->text, minByteSize);
   return TRUE;
 }
 
@@ -237,9 +237,9 @@ UTF8String_pushText(
     return FALSE;
   }
 
-  const size_t bytesize = sizeof(BYTE) * rightTextLength;
+  const size_t byteSize = sizeof(BYTE) * rightTextLength;
 
-  memcpy(&(string->text[string->length]), rightText, bytesize);
+  memcpy(&(string->text[string->length]), rightText, byteSize);
   string->length += rightTextLength;
   string->text[string->length] = '\0';
 
@@ -343,18 +343,18 @@ UTF16String_assertCapacity(
   _Inout_ UTF16String *string,
   _In_ const size_t additionalLength)
 {
-  size_t new_capacity = string->length + additionalLength + 1;
+  size_t newCapacity = string->length + additionalLength + 1;
 
-  if (new_capacity > string->capacity)
+  if (newCapacity > string->capacity)
   {
-    new_capacity = Misc_nextPowerOfTwo(new_capacity - 1);
+    newCapacity = Misc_nextPowerOfTwo(newCapacity - 1);
 
-    const size_t new_bytesize = sizeof(WCHAR) * new_capacity;
-    LPWSTR new_text = realloc(string->text, new_bytesize);
-    if (NULL == new_text) { return FALSE; }
+    const size_t newByteSize = sizeof(WCHAR) * newCapacity;
+    LPWSTR newText = realloc(string->text, newByteSize);
+    if (NULL == newText) { return FALSE; }
 
-    string->text = new_text;
-    string->capacity = new_capacity;
+    string->text = newText;
+    string->capacity = newCapacity;
   }
 
   return TRUE;
@@ -374,16 +374,16 @@ UTF16String_copy(
   }
 
   const size_t capacity = Misc_nextPowerOfTwo(source->length);
-  const size_t min_bytesize = sizeof(WCHAR) * (1 + source->length);
-  const size_t max_bytesize = sizeof(WCHAR) * capacity;
+  const size_t minByteSize = sizeof(WCHAR) * (1 + source->length);
+  const size_t maxByteSize = sizeof(WCHAR) * capacity;
 
   destination->length = source->length;
   destination->capacity = capacity;
 
-  destination->text = malloc(max_bytesize);
+  destination->text = malloc(maxByteSize);
   if (NULL == destination->text) { return FALSE; }
 
-  memcpy(destination->text, source->text, min_bytesize);
+  memcpy(destination->text, source->text, minByteSize);
   return TRUE;
 }
 
@@ -523,9 +523,9 @@ UTF16String_pushText(
     return FALSE;
   }
 
-  const size_t bytesize = sizeof(WCHAR) * rightTextLength;
+  const size_t byteSize = sizeof(WCHAR) * rightTextLength;
 
-  memcpy(&(string->text[string->length]), rightText, bytesize);
+  memcpy(&(string->text[string->length]), rightText, byteSize);
   string->length += rightTextLength;
   string->text[string->length] = '\0';
 

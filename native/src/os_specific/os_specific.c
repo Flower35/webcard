@@ -115,7 +115,7 @@ OSSpecific_validateTypesOfStreams(
 BOOL
 OSSpecific_peekStream(
   _In_ const os_specific_stream_t stream,
-  _Out_ DWORD *streamSizeRef)
+  _Out_ uint32_t *streamSizeRef)
 {
   #if defined(_WIN32)
   {
@@ -213,7 +213,7 @@ OSSpecific_peekStream(
           return FALSE;
         }
 
-        streamSizeRef[0] = (DWORD) result;
+        streamSizeRef[0] = (uint32_t) result;
 
         return TRUE;
       }

@@ -15,11 +15,11 @@
   #include <winscard.h>
 
 #elif defined(__linux__)
-  #include "os_specific/wtypes_for_unix.h"
+  /* Included "os_specific.h" => "wtypes_for_unix.h" */
   #include <PCSC/winscard.h>
 
 #elif defined(__APPLE__)
-  #include "os_specific/wtypes_for_unix.h"
+  /* Included "os_specific.h" => "wtypes_for_unix.h" */
   #include <PCSC/musclecard.h>
   #define SCARD_READERSTATE SCARD_READERSTATE_A
   #define LPSCARD_READERSTATE LPSCARD_READERSTATE_A
@@ -89,7 +89,7 @@ struct SCardConnection
   SCARDHANDLE handle;
 
   /** A flag that indicates the established active protocol. */
-  DWORD activeProtocol;
+  PCSC_DWORD activeProtocol;
 
   /** How many incoming Reader State Changes should be ignored. */
   DWORD ignoreCounter;
@@ -121,7 +121,7 @@ SCardConnection_open(
   _Inout_ SCardConnection *connection,
   _In_ const SCARDCONTEXT context,
   _In_ LPCTSTR readerName,
-  _In_ const DWORD shareMode);
+  _In_ const PCSC_DWORD shareMode);
 
 /**
  * @brief Closes connection to a Smart Card Reader.
@@ -153,9 +153,9 @@ extern BOOL
 SCardConnection_transceiveSingle(
   _In_ const SCardConnection *connection,
   _In_ const BYTE *input,
-  _In_ const DWORD inputLength,
+  _In_ const PCSC_DWORD inputLength,
   _Out_ BYTE *output,
-  _Inout_ DWORD *outputLengthRef);
+  _Inout_ PCSC_DWORD *outputLengthRef);
 
 /**
  * @brief Sends a large APDU to the smart card
@@ -177,9 +177,9 @@ SCardConnection_transceiveMultiple(
   _In_ const SCardConnection *connection,
   _Inout_ UTF8String *hexStringResult,
   _In_ const BYTE *input,
-  _In_ const DWORD inputLength,
+  _In_ const PCSC_DWORD inputLength,
   _Out_ LPBYTE output,
-  _In_ const DWORD outputLength);
+  _In_ const PCSC_DWORD outputLength);
 
 
 /**************************************************************/
@@ -197,7 +197,7 @@ typedef struct SCardReaderDB SCardReaderDB;
 struct SCardReaderDB
 {
   /** Number of allocated Smart Card Readers. */
-  DWORD count;
+  int count;
 
   /**
    * Array of `SCARD_READERSTATE` structures, needed for
@@ -306,7 +306,7 @@ SCardReaderDB_fetch(
    */
   extern LPCSTR
   WebCard_errorLookup(
-    _In_ const LONG errorCode);
+    _In_ const PCSC_LONG errorCode);
 
 #endif
 
@@ -401,13 +401,13 @@ WebCard_handleRequest(
  */
 extern BOOL
 WebCard_pushReaderNameToJsonString(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Out_ UTF8String *resultReaderName);
 
 /**
  * @brief Appends selected Reader's name to a given JSON Array.
  *
- * @param[in] reader Reference to a read-only Reader State,
+ * @param[in] readerState Reference to a read-only Reader State,
  * that contains the reader name property (`->szReader`).
  * @param[in,out] jsonArray Reference to a VALID `JsonArray` object,
  * to which the Reader's name will be appended.
@@ -415,13 +415,13 @@ WebCard_pushReaderNameToJsonString(
  */
 extern BOOL
 WebCard_pushReaderNameToJsonArray(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Inout_ JsonArray *jsonArray);
 
 /**
  * @brief Appends selected Reader's name to a given JSON Object under some key.
  *
- * @param[in] reader Reference to a read-only Reader State,
+ * @param[in] readerState Reference to a read-only Reader State,
  * that contains the reader name property (`->szReader`).
  * @param[in,out] jsonObject Reference to a VALID `JsonObject` object,
  * under which the Reader's name will be appended.
@@ -432,7 +432,7 @@ WebCard_pushReaderNameToJsonArray(
  */
 extern BOOL
 WebCard_pushReaderNameToJsonObject(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key);
 
@@ -442,7 +442,7 @@ WebCard_pushReaderNameToJsonObject(
  *
  * Appends selected Reader's name ("n") and Reader's ATR ("a")
  * to a given JSON Object under predefined keys.
- * @param[in] reader Reference to a read-only Reader State,
+ * @param[in] readerState Reference to a read-only Reader State,
  * that contains the reader name property (`->szReader`)
  * and the "Answer To Reset" property (`->rgbAtr`).
  * @param[out] jsonReaderObject Reference to a VALID `JsonObject` object
@@ -454,13 +454,13 @@ WebCard_pushReaderNameToJsonObject(
  */
 extern BOOL
 WebCard_convertReaderStateToJsonObject(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Out_ JsonObject *jsonReaderObject);
 
 /**
  * @brief Appends selected Reader's ATR to a given JSON Object under some key.
  *
- * @param[in] reader Reference to a read-only Reader State,
+ * @param[in] readerState Reference to a read-only Reader State,
  * that contains the "Answer To Reset" property (`->rgbAtr`).
  * @param[in,out] jsonObject Reference to a VALID `JsonObject` object,
  * under which the Reader's ATR will be appended.
@@ -471,7 +471,7 @@ WebCard_convertReaderStateToJsonObject(
  */
 extern BOOL
 WebCard_pushReaderAtrToJsonObject(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key);
 
@@ -577,7 +577,7 @@ WebCard_transmitAndReceive(
  *  readers-list fetching happens constantly with short intervals);
  * -> list of freshly disconnected readers (usually one name);
  *
- * @param[in] reader Reference to a read-only Reader State,
+ * @param[in] readerState Reference to a read-only Reader State,
  * that contains the "Answer To Reset" property (`->rgbAtr`).
  * This parameter is optional (can be `NULL`) for reader events
  * other than "Card Insertion".
@@ -597,7 +597,7 @@ WebCard_transmitAndReceive(
  */
 extern VOID
 WebCard_sendReaderEvent(
-  _In_opt_ const SCARD_READERSTATE *reader,
+  _In_opt_ const SCARD_READERSTATE *readerState,
   _In_ const size_t readerIndex,
   _In_ const int readerEvent,
   _Out_ JsonObject *jsonResponse,

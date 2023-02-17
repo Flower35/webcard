@@ -22,7 +22,7 @@ VOID
 SCardReaderDB_destroy(
   _Inout_ SCardReaderDB *database)
 {
-  DWORD i;
+  int i;
 
   if (NULL != database->states)
   {
@@ -55,12 +55,12 @@ SCardReaderDB_load(
   _Out_ SCardReaderDB *database,
   _In_ LPCTSTR readerNames)
 {
-  DWORD bytesize;
-  DWORD name_length;
+  size_t byteSize;
+  size_t nameLength;
 
-  LPCTSTR next_reader;
-  SCARD_READERSTATE *test_readerstate;
-  SCardConnection *test_connection;
+  LPCTSTR nextReader;
+  SCARD_READERSTATE *readerStateRef;
+  SCardConnection *testConnection;
 
   /* Initialize outgoing `SCardReaderDB` structure */
 
@@ -68,37 +68,37 @@ SCardReaderDB_load(
 
   /* Iterate through every Smart Card Reader */
 
-  next_reader = readerNames;
+  nextReader = readerNames;
 
-  while (next_reader[0])
+  while (nextReader[0])
   {
     /* Expand the "Smart Card Reader State" list */
 
-    bytesize = sizeof(SCARD_READERSTATE) * (1 + database->count);
-    test_readerstate = realloc(database->states, bytesize);
-    if (NULL == test_readerstate) { return FALSE; }
+    byteSize = sizeof(SCARD_READERSTATE) * (1 + database->count);
+    readerStateRef = realloc(database->states, byteSize);
+    if (NULL == readerStateRef) { return FALSE; }
 
-    database->states = test_readerstate;
-    test_readerstate = &(database->states[database->count]);
+    database->states = readerStateRef;
+    readerStateRef = &(database->states[database->count]);
 
     /* Initialize "Smart Card Reader State" structure for current reader */
 
-    test_readerstate->szReader = NULL;
-    test_readerstate->dwCurrentState = SCARD_STATE_UNAWARE;
-    test_readerstate->cbAtr = 0;
+    readerStateRef->szReader = NULL;
+    readerStateRef->dwCurrentState = SCARD_STATE_UNAWARE;
+    readerStateRef->cbAtr = 0;
 
     /* Expand the "Smart Card Connection" list */
 
-    bytesize = sizeof(SCardConnection) * (1 + database->count);
-    test_connection = realloc(database->connections, bytesize);
-    if (NULL == test_connection) { return FALSE; }
+    byteSize = sizeof(SCardConnection) * (1 + database->count);
+    testConnection = realloc(database->connections, byteSize);
+    if (NULL == testConnection) { return FALSE; }
 
-    database->connections = test_connection;
-    test_connection = &(database->connections[database->count]);
+    database->connections = testConnection;
+    testConnection = &(database->connections[database->count]);
 
     /* Initialize "Smart Card Connection" structure for current reader */
 
-    SCardConnection_init(test_connection);
+    SCardConnection_init(testConnection);
 
     /* Both lists have "+1" valid (initialized) structure */
 
@@ -106,19 +106,19 @@ SCardReaderDB_load(
 
     /* Get Smart Card Reader name's length */
 
-    name_length = _tcslen(next_reader);
+    nameLength = _tcslen(nextReader);
 
     /* Clone Smart Card Reader name */
 
-    bytesize = sizeof(TCHAR) * (1 + name_length);
-    test_readerstate->szReader = malloc(bytesize);
-    if (NULL == test_readerstate->szReader) { return FALSE; }
+    byteSize = sizeof(TCHAR) * (1 + nameLength);
+    readerStateRef->szReader = malloc(byteSize);
+    if (NULL == readerStateRef->szReader) { return FALSE; }
 
-    memcpy((void *) test_readerstate->szReader, next_reader, bytesize);
+    memcpy((void *) readerStateRef->szReader, nextReader, byteSize);
 
     /* Move to the next entry in a multi-string list */
 
-    next_reader = &(next_reader[1 + name_length]);
+    nextReader = &(nextReader[1 + nameLength]);
   }
 
   return TRUE;
@@ -131,7 +131,7 @@ SCardReaderDB_hasReaderNamed(
   _In_ const SCardReaderDB *database,
   _In_ LPCTSTR readerName)
 {
-  DWORD i;
+  int i;
 
   for (i = 0; i < database->count; i++)
   {
@@ -153,15 +153,15 @@ SCardReaderDB_fetch(
   _In_ const SCARDCONTEXT context,
   _In_ const BOOL firstFetch)
 {
-  int fetch_result;
-  LONG result;
-  DWORD bytesize;
-  DWORD test_length;
-  BOOL test_bool;
+  int fetchResult;
+  PCSC_LONG pcscResult;
+  size_t byteSize;
+  PCSC_DWORD testLength;
+  BOOL testBool;
 
-  DWORD i;
-  LPTSTR reader_names;
-  SCardReaderDB test_database;
+  int i;
+  LPTSTR readerNames;
+  SCardReaderDB testDatabase;
 
   if (NULL != jsonReaderNames)
   {
@@ -170,24 +170,26 @@ SCardReaderDB_fetch(
 
   /* Get total length of the multi-string list */
 
-  result = SCardListReaders(
+  testLength = 0;
+
+  pcscResult = SCardListReaders(
     context,
     NULL,
     NULL,
-    &(test_length));
+    &(testLength));
 
-  if (SCARD_S_SUCCESS != result)
+  if (SCARD_S_SUCCESS != pcscResult)
   {
-    if (SCARD_E_SERVICE_STOPPED == result)
+    if (SCARD_E_SERVICE_STOPPED == pcscResult)
     {
       /* Last reader unplugged */
       return WEBCARD_FETCH_READERS__SERVICE_STOPPED;
     }
-    else if (SCARD_E_NO_READERS_AVAILABLE == result)
+    else if (SCARD_E_NO_READERS_AVAILABLE == pcscResult)
     {
       /* Ignore this error, as readers can be plugged-in */
       /* later while the Native App is still running */
-      test_length = 0;
+      testLength = 0;
     }
     else
     {
@@ -195,8 +197,8 @@ SCardReaderDB_fetch(
       {
         OSSpecific_writeDebugMessage(
           "{SCardListReaders} failed: 0x%08X (%s)",
-          (uint32_t) result,
-          WebCard_errorLookup(result));
+          (uint32_t) pcscResult,
+          WebCard_errorLookup(pcscResult));
       }
       #endif
 
@@ -206,7 +208,7 @@ SCardReaderDB_fetch(
 
   /* Are there any Smart Card Readers even available? */
 
-  if (0 == test_length)
+  if (0 == testLength)
   {
     if (firstFetch)
     {
@@ -238,21 +240,21 @@ SCardReaderDB_fetch(
 
   /* Allocate memory for the multi-string list */
 
-  bytesize = sizeof(TCHAR) * test_length;
-  reader_names = malloc(bytesize);
-  if (NULL == reader_names) { return WEBCARD_FETCH_READERS__FAIL; }
+  byteSize = sizeof(TCHAR) * testLength;
+  readerNames = malloc(byteSize);
+  if (NULL == readerNames) { return WEBCARD_FETCH_READERS__FAIL; }
 
   /* Get Smart Card Reader names */
 
-  result = SCardListReaders(
+  pcscResult = SCardListReaders(
     context,
     NULL,
-    reader_names,
-    &(test_length));
+    readerNames,
+    &(testLength));
 
-  if (SCARD_S_SUCCESS != result)
+  if (SCARD_S_SUCCESS != pcscResult)
   {
-    free(reader_names);
+    free(readerNames);
     return WEBCARD_FETCH_READERS__FAIL;
   }
 
@@ -260,44 +262,44 @@ SCardReaderDB_fetch(
 
   if (firstFetch)
   {
-    test_bool = TRUE;
-    fetch_result = WEBCARD_FETCH_READERS__MORE_READERS;
+    testBool = TRUE;
+    fetchResult = WEBCARD_FETCH_READERS__MORE_READERS;
   }
   else
   {
-    test_length = Misc_multiStringList_elementCount(reader_names);
+    testLength = Misc_multiStringList_elementCount(readerNames);
 
-    if (test_length != database->count)
+    if (testLength != database->count)
     {
-      test_bool = TRUE;
-      fetch_result = (test_length > database->count) ?
+      testBool = TRUE;
+      fetchResult = (testLength > database->count) ?
         WEBCARD_FETCH_READERS__MORE_READERS :
         WEBCARD_FETCH_READERS__LESS_READERS;
     }
     else
     {
-      test_bool = FALSE;
+      testBool = FALSE;
     }
   }
 
-  if (!test_bool)
+  if (!testBool)
   {
-    free(reader_names);
+    free(readerNames);
     return WEBCARD_FETCH_READERS__IGNORE;
   }
 
   /* Prepare local Smart Card Readers array */
 
-  test_bool = SCardReaderDB_load(&(test_database), reader_names);
+  testBool = SCardReaderDB_load(&(testDatabase), readerNames);
 
-  if (NULL != reader_names)
+  if (NULL != readerNames)
   {
-    free(reader_names);
+    free(readerNames);
   }
 
-  if (!test_bool)
+  if (!testBool)
   {
-    SCardReaderDB_destroy(&(test_database));
+    SCardReaderDB_destroy(&(testDatabase));
     return WEBCARD_FETCH_READERS__FAIL;
   }
 
@@ -305,20 +307,20 @@ SCardReaderDB_fetch(
   {
     /* Find differences in two databases */
 
-    if (WEBCARD_FETCH_READERS__MORE_READERS == fetch_result)
+    if (WEBCARD_FETCH_READERS__MORE_READERS == fetchResult)
     {
       /* Look for the names in OLD (SMALLER) database */
       /* that are not found in the NEW (LARGER) database */
-      for (i = 0; i < test_database.count; i++)
+      for (i = 0; i < testDatabase.count; i++)
       {
-        test_bool = SCardReaderDB_hasReaderNamed(
+        testBool = SCardReaderDB_hasReaderNamed(
           database,
-          test_database.states[i].szReader);
+          testDatabase.states[i].szReader);
 
-        if (!test_bool)
+        if (!testBool)
         {
           WebCard_pushReaderNameToJsonArray(
-            &(test_database.states[i]),
+            &(testDatabase.states[i]),
             jsonReaderNames);
         }
       }
@@ -329,11 +331,11 @@ SCardReaderDB_fetch(
       /* that are not found in the OLD (LARGER) database */
       for (i = 0; i < database->count; i++)
       {
-        test_bool = SCardReaderDB_hasReaderNamed(
-          &(test_database),
+        testBool = SCardReaderDB_hasReaderNamed(
+          &(testDatabase),
           database->states[i].szReader);
 
-        if (!test_bool)
+        if (!testBool)
         {
           WebCard_pushReaderNameToJsonArray(
             &(database->states[i]),
@@ -350,9 +352,9 @@ SCardReaderDB_fetch(
   /* Replace outgoing array with the local array */
   /* (direct assignment: local destructor should not be called) */
 
-  database[0] = test_database;
+  database[0] = testDatabase;
 
-  return fetch_result;
+  return fetchResult;
 }
 
 /**************************************************************/

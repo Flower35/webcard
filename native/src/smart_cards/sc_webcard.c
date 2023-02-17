@@ -11,7 +11,7 @@
 
   LPCSTR
   WebCard_errorLookup(
-    _In_ const LONG errorCode)
+    _In_ const PCSC_LONG errorCode)
   {
     switch (errorCode)
     {
@@ -168,20 +168,20 @@ WebCard_establishContext(
 {
   resultContext[0] = 0;
 
-  LONG result = SCardEstablishContext(
+  PCSC_LONG pcscResult = SCardEstablishContext(
     SCARD_SCOPE_USER,
     NULL,
     NULL,
     resultContext);
 
-  if (SCARD_S_SUCCESS != result)
+  if (SCARD_S_SUCCESS != pcscResult)
   {
     #if defined(_DEBUG)
     {
       OSSpecific_writeDebugMessage(
         "{SCardEstablishContext} failed: 0x%08X (%s)",
-        (uint32_t) result,
-        WebCard_errorLookup(result));
+        (uint32_t) pcscResult,
+        WebCard_errorLookup(pcscResult));
     }
     #endif
 
@@ -571,7 +571,7 @@ WebCard_handleRequest(
 
 BOOL
 WebCard_pushReaderNameToJsonString(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Out_ UTF8String *resultReaderName)
 {
   BOOL test_bool;
@@ -588,7 +588,7 @@ WebCard_pushReaderNameToJsonString(
 
     test_bool = UTF16String_pushText(
       &(utf16_reader_name),
-      reader->szReader,
+      readerState->szReader,
       0);
 
     if (test_bool)
@@ -604,7 +604,7 @@ WebCard_pushReaderNameToJsonString(
   {
     test_bool = UTF8String_pushText(
       resultReaderName,
-      reader->szReader,
+      readerState->szReader,
       0);
   }
   #endif
@@ -616,7 +616,7 @@ WebCard_pushReaderNameToJsonString(
 
 BOOL
 WebCard_pushReaderNameToJsonArray(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Inout_ JsonArray *jsonArray)
 {
   BOOL test_bool;
@@ -624,7 +624,7 @@ WebCard_pushReaderNameToJsonArray(
   UTF8String utf8_reader_name;
 
   test_bool = WebCard_pushReaderNameToJsonString(
-    reader,
+    readerState,
     &(utf8_reader_name));
 
   if (!test_bool)
@@ -649,7 +649,7 @@ WebCard_pushReaderNameToJsonArray(
 
 BOOL
 WebCard_pushReaderNameToJsonObject(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key)
 {
@@ -658,7 +658,7 @@ WebCard_pushReaderNameToJsonObject(
   UTF8String utf8_reader_name;
 
   test_bool = WebCard_pushReaderNameToJsonString(
-    reader,
+    readerState,
     &(utf8_reader_name));
 
   if (!test_bool)
@@ -686,7 +686,7 @@ WebCard_pushReaderNameToJsonObject(
 
 BOOL
 WebCard_convertReaderStateToJsonObject(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Out_ JsonObject *jsonReaderObject)
 {
   BOOL test_bool;
@@ -699,7 +699,7 @@ WebCard_convertReaderStateToJsonObject(
   /* Add key "n" (Reader Name) */
 
   test_bool = WebCard_pushReaderNameToJsonObject(
-    reader,
+    readerState,
     jsonReaderObject,
     "n");
 
@@ -708,7 +708,7 @@ WebCard_convertReaderStateToJsonObject(
   /* Add key "a" (card Answer To Reset) */
 
   return WebCard_pushReaderAtrToJsonObject(
-    reader,
+    readerState,
     jsonReaderObject,
     "a");
 }
@@ -717,7 +717,7 @@ WebCard_convertReaderStateToJsonObject(
 
 BOOL
 WebCard_pushReaderAtrToJsonObject(
-  _In_ const SCARD_READERSTATE *reader,
+  _In_ const SCARD_READERSTATE *readerState,
   _Inout_ JsonObject *jsonObject,
   _In_ LPCSTR key)
 {
@@ -731,8 +731,8 @@ WebCard_pushReaderAtrToJsonObject(
 
   test_bool = UTF8String_pushBytesAsHex(
     &(utf8_string),
-    reader->cbAtr,
-    reader->rgbAtr);
+    readerState->cbAtr,
+    readerState->rgbAtr);
 
   if (!test_bool)
   {
@@ -844,8 +844,8 @@ WebCard_tryConnectingToReader(
 {
   BOOL test_bool;
   size_t reader_index;
-  const SCARD_READERSTATE *reader;
-  DWORD share_mode = SCARD_SHARE_SHARED;
+  const SCARD_READERSTATE *readerState;
+  PCSC_DWORD share_mode = SCARD_SHARE_SHARED;
   JsonValue json_value;
 
   /* Try to find the "r" key (reader index) */
@@ -894,17 +894,17 @@ WebCard_tryConnectingToReader(
 
   if (test_bool && (JSON_VALUE_TYPE__NUMBER == json_value.type))
   {
-    share_mode = (DWORD) (((FLOAT *) json_value.value)[0]);
+    share_mode = (PCSC_DWORD) (((FLOAT *) json_value.value)[0]);
   }
 
   /* Try to open a connection to active Smart Card */
 
-  reader = &(database->states[reader_index]);
+  readerState = &(database->states[reader_index]);
 
   test_bool = SCardConnection_open(
     &(database->connections[reader_index]),
     context,
-    reader->szReader,
+    readerState->szReader,
     share_mode);
 
   if (!test_bool) { return FALSE; }
@@ -912,7 +912,7 @@ WebCard_tryConnectingToReader(
   /* Add key "d" (card Answer To Reset) */
 
   return WebCard_pushReaderAtrToJsonObject(
-    reader,
+    readerState,
     jsonResponse,
     "d");
 }
@@ -1112,7 +1112,7 @@ WebCard_transmitAndReceive(
 
 VOID
 WebCard_sendReaderEvent(
-  _In_opt_ const SCARD_READERSTATE *reader,
+  _In_opt_ const SCARD_READERSTATE *readerState,
   _In_ const size_t readerIndex,
   _In_ const int readerEvent,
   _Out_ JsonObject *jsonResponse,
@@ -1151,7 +1151,7 @@ WebCard_sendReaderEvent(
 
   if (!test_bool) { return; }
 
-  if (NULL != reader)
+  if (NULL != readerState)
   {
     /* Add key "r" (reader index for reader events) */
 
@@ -1169,7 +1169,7 @@ WebCard_sendReaderEvent(
     if (WEBCARD_READER_EVENT__CARD_INSERTION == readerEvent)
     {
       test_bool = WebCard_pushReaderAtrToJsonObject(
-        reader,
+        readerState,
         jsonResponse,
         "d");
 
@@ -1217,22 +1217,22 @@ WebCard_handleStatusChange(
 {
   JsonObject json_response;
 
-  LONG result = SCardGetStatusChange(
+  PCSC_LONG pcscResult = SCardGetStatusChange(
     context,
     0,
     database->states,
     database->count);
 
-  if (SCARD_S_SUCCESS != result) { return; }
+  if (SCARD_S_SUCCESS != pcscResult) { return; }
 
   /* Enumerate Smart Card Readers */
 
   for (size_t i = 0; i < database->count; i++)
   {
-    SCARD_READERSTATE *reader = &(database->states[i]);
+    SCARD_READERSTATE *readerState = &(database->states[i]);
     SCardConnection *connection = &(database->connections[i]);
 
-    if (reader->dwEventState & SCARD_STATE_CHANGED)
+    if (readerState->dwEventState & SCARD_STATE_CHANGED)
     {
       if (connection->ignoreCounter > 0)
       {
@@ -1242,13 +1242,13 @@ WebCard_handleStatusChange(
       {
         int reader_event = WEBCARD_READER_EVENT__NONE;
 
-        if ((reader->dwCurrentState & SCARD_STATE_EMPTY) &&
-          (reader->dwEventState & SCARD_STATE_PRESENT))
+        if ((readerState->dwCurrentState & SCARD_STATE_EMPTY) &&
+          (readerState->dwEventState & SCARD_STATE_PRESENT))
         {
           reader_event = WEBCARD_READER_EVENT__CARD_INSERTION;
         }
-        else if ((reader->dwCurrentState & SCARD_STATE_PRESENT) &&
-        (reader->dwEventState & SCARD_STATE_EMPTY))
+        else if ((readerState->dwCurrentState & SCARD_STATE_PRESENT) &&
+          (readerState->dwEventState & SCARD_STATE_EMPTY))
         {
           reader_event = WEBCARD_READER_EVENT__CARD_REMOVAL;
 
@@ -1259,7 +1259,7 @@ WebCard_handleStatusChange(
         if (WEBCARD_READER_EVENT__NONE != reader_event)
         {
           WebCard_sendReaderEvent(
-            reader,
+            readerState,
             i,
             reader_event,
             &(json_response),
@@ -1269,7 +1269,7 @@ WebCard_handleStatusChange(
         }
       }
 
-      reader->dwCurrentState = (reader->dwEventState & (~SCARD_STATE_CHANGED));
+      readerState->dwCurrentState = (readerState->dwEventState & (~SCARD_STATE_CHANGED));
     }
   }
 }
