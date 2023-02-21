@@ -116,6 +116,40 @@ This development version requires manual installation of the unpacked extension.
 
 ---
 
+## **Automatic building & installation**
+
+Included in the **`install`** directory is the **`autobuild`** script, which does the following:
+
+1. Checks if build tools (`make`, `gcc` and `python3`) are added to system's **`PATH`**.
+
+2. Launches **`make release -B`** in the **`native`** directory (*rebuilding the **`webcard`** Native App*).
+
+3. Launches a short `Python3` script, which calculates Chromium extension's ID (*assuming that user will not move or copy the **`extension`** directory with its subdirectories*)
+
+4. Launches the **`install`** script with automatic flow (*automatically registers the WebCard NativeMessagingHost for all recognized Web Browsers*).
+
+Launching the **`autobuild`** script:
+
+* on **Microsoft Windows**:
+
+    ```
+    cd install
+    autobuild
+    ```
+
+* on **Linux** and **macOS**:
+
+    ```
+    chmod u+x autobuild.sh
+    ./autobuild.sh
+    ```
+
+This way, you can build the Native App first, and then sideload the extension into a Web Browser of your choice (*without needing to know the extension ID*).
+
+&nbsp;
+
+---
+
 ## **Enabling the "Personal Computer / Smart Card" services**
 
 This step is required for **Linux** users only.

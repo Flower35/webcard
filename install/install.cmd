@@ -1,7 +1,20 @@
 @ECHO OFF
-CLS
 
 SETLOCAL
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Check for special argument "INSTALL.CMD /ALL"
+
+SET INSTALL_ALL=
+
+SET CHOICE="%1"
+SET CHOICE=%CHOICE:"=%
+IF "/ALL"=="%CHOICE%" SET INSTALL_ALL=YES
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+IF NOT "YES"=="%INSTALL_ALL%" CLS
+
 SET __=--------------------------------
 
 ECHO %__%
@@ -176,12 +189,18 @@ SET AVAIL_CHROMIUM=
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Browser Selection Menu
 
-:STEP_06A
+:STEP_06AA
+    IF NOT "YES"=="%INSTALL_ALL%" GOTO STEP_06AB
+        IF "Available"=="%SEL_FIREFOX%"  SET "SEL_FIREFOX=Selected "
+        IF "Available"=="%SEL_CHROMIUM%" SET "SEL_CHROMIUM=Selected "
+        GOTO STEP_07A
+
+:STEP_06AB
     ECHO %__%
     ECHO (press Any Key to continue)
     PAUSE>NUL
 
-:STEP_06B
+:STEP_06AC
     CLS
     ECHO %__%
     ECHO Select Web Browsers
@@ -197,35 +216,35 @@ SET AVAIL_CHROMIUM=
     SET CHOICE="%CHOICE%"
     SET CHOICE=%CHOICE:"=%
 
-:STEP_06C
-    IF NOT "1"=="%CHOICE%" GOTO STEP_06F
-        IF "Available"=="%SEL_FIREFOX%" GOTO STEP_06D
-        IF "Selected "=="%SEL_FIREFOX%" GOTO STEP_06E
-        GOTO STEP_06B
-:STEP_06D
+:STEP_06BA
+    IF NOT "1"=="%CHOICE%" GOTO STEP_06CA
+        IF "Available"=="%SEL_FIREFOX%" GOTO STEP_06BB
+        IF "Selected "=="%SEL_FIREFOX%" GOTO STEP_06BC
+        GOTO STEP_06AC
+:STEP_06BB
     SET "SEL_FIREFOX=Selected "
-    GOTO STEP_06B
-:STEP_06E
+    GOTO STEP_06AC
+:STEP_06BC
     SET "SEL_FIREFOX=Available"
-    GOTO STEP_06B
+    GOTO STEP_06AC
 
-:STEP_06F
+:STEP_06CA
     IF NOT "2"=="%CHOICE%" GOTO STEP_07A
-        IF "Available"=="%SEL_CHROMIUM%" GOTO STEP_06G
-        IF "Selected "=="%SEL_CHROMIUM%" GOTO STEP_06H
-        GOTO STEP_06B
-:STEP_06G
+        IF "Available"=="%SEL_CHROMIUM%" GOTO STEP_06CB
+        IF "Selected "=="%SEL_CHROMIUM%" GOTO STEP_06CC
+        GOTO STEP_06AC
+:STEP_06CB
     SET "SEL_CHROMIUM=Selected "
-    GOTO STEP_06B
-:STEP_06H
+    GOTO STEP_06AC
+:STEP_06CC
     SET "SEL_CHROMIUM=Available"
-    GOTO STEP_06B
+    GOTO STEP_06AC
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Copying "Native messaging application"
 
 :STEP_07A
-    CLS
+    IF NOT "YES"=="%INSTALL_ALL%" CLS
     ECHO %__%
     ECHO * Asserting that the destination directory exists...
     IF EXIST "%TARGET_PATH%\" GOTO STEP_07B
@@ -304,10 +323,16 @@ SET AVAIL_CHROMIUM=
 :INSTALL_FAILURE
     ECHO.
     ECHO %__%
-    ECHO Installation Failure... (press Any Key to exit)
-    PAUSE>NUL
-    CLS
 
+    IF "YES"=="%INSTALL_ALL%" GOTO INSTALL_FAILURE_SHORT
+        ECHO Installation Failure... (press Any Key to exit)
+        PAUSE>NUL
+        CLS
+
+        EXIT /B 1
+
+:INSTALL_FAILURE_SHORT
+    ECHO Installation Failure...
     EXIT /B 1
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -316,10 +341,16 @@ SET AVAIL_CHROMIUM=
 :INSTALL_SUCCESS
     ECHO.
     ECHO %__%
-    ECHO Installation Success! (press Any Key to exit)
-    PAUSE>NUL
-    CLS
 
+    IF "YES"=="%INSTALL_ALL%" GOTO INSTALL_SUCCESS_SHORT
+        ECHO Installation Success! (press Any Key to exit)
+        PAUSE>NUL
+        CLS
+
+        EXIT /B 0
+
+:INSTALL_SUCCESS_SHORT
+    ECHO Installation Success!
     EXIT /B 0
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

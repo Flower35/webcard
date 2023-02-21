@@ -1,6 +1,21 @@
 #!/bin/sh
 
-clear 2>/dev/null
+################################################################
+# Check for special argument "./install.sh -all"
+
+INSTALL_ALL=
+
+if [ "$1" = "-all" ]
+then
+    INSTALL_ALL="YES"
+fi
+
+################################################################
+
+if [ ! "YES" = "${INSTALL_ALL}" ]
+then
+    clear 2>/dev/null
+fi
 
 __="--------------------------------"
 
@@ -52,6 +67,12 @@ printf "%s\n" "${__}"
 
     else
         printf "* Error: Unsupported Operating System \"%s\"!\n" "${SYSTEM_TYPE}"
+
+        if [ ! "YES" = "${INSTALL_ALL}" ]
+        then
+            read -r _
+        fi
+
         exit 1
     fi
 
@@ -67,6 +88,12 @@ printf "%s\n" "${__}"
 
     else
         printf "\n* Error: Unsupported Processor Architecture \"%s\"!\n" "${CPU}"
+
+        if [ ! "YES" = "${INSTALL_ALL}" ]
+        then
+            read -r _
+        fi
+
         exit 1
     fi
 
@@ -89,6 +116,12 @@ printf "%s\n" "${__}"
     then
         printf "* Error: File \"%s\" not found!\n" "${APP_PATH}/${APP_NAME}"
         printf " Please (re)build the Native App executable.\n"
+
+        if [ ! "YES" = "${INSTALL_ALL}" ]
+        then
+            read -r _
+        fi
+
         exit 1
     fi
 
@@ -211,99 +244,131 @@ printf "%s\n" "${__}"
 ################################################################
 # Browser Selection Menu
 
-    printf "%s\n" "${__}"
-    printf "(press Enter to continue)\n"
-    read -r _
+    if [ "YES" = "${INSTALL_ALL}" ]
+    then
+        if [ "Available" = "${SEL_FIREFOX}" ]
+        then
+            SEL_FIREFOX="Selected "
+        fi
 
-    CHOICE=
+        if [ "Available" = "${SEL_CHROMIUM}" ]
+        then
+            SEL_CHROMIUM="Selected "
+        fi
 
-    while [ -z "${CHOICE}" ]
-    do
-        clear 2>/dev/null
+        if [ "Available" = "${SEL_GOOGLE_CHROME}" ]
+        then
+            SEL_GOOGLE_CHROME="Selected "
+        fi
 
+        if [ "Available" = "${SEL_MICROSOFT_EDGE}" ]
+        then
+            SEL_MICROSOFT_EDGE="Selected "
+        fi
+
+    else
         printf "%s\n" "${__}"
-        printf "Select Web Browsers\n"
-        printf "%s\n" "${__}"
-        printf "1: [ %s ] \"Mozilla Firefox\"\n" "${SEL_FIREFOX}"
-        printf "2: [ %s ] \"Chromium\"\n" "${SEL_CHROMIUM}"
-        printf "3: [ %s ] \"Google Chrome\"\n" "${SEL_GOOGLE_CHROME}"
-        printf "4: [ %s ] \"Microsoft Edge\"\n" "${SEL_MICROSOFT_EDGE}"
-        printf "%s\n" "${__}"
+        printf "(press Enter to continue)\n"
+        read -r _
 
         CHOICE=
-        printf "Type a SINGLE number (or leave a blank choice\n"
-        printf " to continue), then press ENTER: "
-        read -r CHOICE
 
-        if [ "1" = "${CHOICE}" ]
-        then
-            if [ "Available" = "${SEL_FIREFOX}" ]
-            then
-                SEL_FIREFOX="Selected "
+        while [ -z "${CHOICE}" ]
+        do
+            clear 2>/dev/null
 
-            elif [ "Selected " = "${SEL_FIREFOX}" ]
-            then
-                SEL_FIREFOX="Available"
-            fi
-
-            CHOICE=
-
-        elif [ "2" = "${CHOICE}" ]
-        then
-            if [ "Available" = "${SEL_CHROMIUM}" ]
-            then
-                SEL_CHROMIUM="Selected "
-
-            elif [ "Selected " = "${SEL_CHROMIUM}" ]
-            then
-                SEL_CHROMIUM="Available"
-            fi
+            printf "%s\n" "${__}"
+            printf "Select Web Browsers\n"
+            printf "%s\n" "${__}"
+            printf "1: [ %s ] \"Mozilla Firefox\"\n" "${SEL_FIREFOX}"
+            printf "2: [ %s ] \"Chromium\"\n" "${SEL_CHROMIUM}"
+            printf "3: [ %s ] \"Google Chrome\"\n" "${SEL_GOOGLE_CHROME}"
+            printf "4: [ %s ] \"Microsoft Edge\"\n" "${SEL_MICROSOFT_EDGE}"
+            printf "%s\n" "${__}"
 
             CHOICE=
+            printf "Type a SINGLE number (or leave a blank choice\n"
+            printf " to continue), then press ENTER: "
+            read -r CHOICE
 
-        elif [ "3" = "${CHOICE}" ]
-        then
-            if [ "Available" = "${SEL_GOOGLE_CHROME}" ]
+            if [ "1" = "${CHOICE}" ]
             then
-                SEL_GOOGLE_CHROME="Selected "
+                if [ "Available" = "${SEL_FIREFOX}" ]
+                then
+                    SEL_FIREFOX="Selected "
 
-            elif [ "Selected " = "${SEL_GOOGLE_CHROME}" ]
+                elif [ "Selected " = "${SEL_FIREFOX}" ]
+                then
+                    SEL_FIREFOX="Available"
+                fi
+
+                CHOICE=
+
+            elif [ "2" = "${CHOICE}" ]
             then
-                SEL_GOOGLE_CHROME="Available"
+                if [ "Available" = "${SEL_CHROMIUM}" ]
+                then
+                    SEL_CHROMIUM="Selected "
+
+                elif [ "Selected " = "${SEL_CHROMIUM}" ]
+                then
+                    SEL_CHROMIUM="Available"
+                fi
+
+                CHOICE=
+
+            elif [ "3" = "${CHOICE}" ]
+            then
+                if [ "Available" = "${SEL_GOOGLE_CHROME}" ]
+                then
+                    SEL_GOOGLE_CHROME="Selected "
+
+                elif [ "Selected " = "${SEL_GOOGLE_CHROME}" ]
+                then
+                    SEL_GOOGLE_CHROME="Available"
+                fi
+
+                CHOICE=
+
+            elif [ "4" = "${CHOICE}" ]
+            then
+                if [ "Available" = "${SEL_MICROSOFT_EDGE}" ]
+                then
+                    SEL_MICROSOFT_EDGE="Selected "
+
+                elif [ "Selected " = "${SEL_MICROSOFT_EDGE}" ]
+                then
+                    SEL_MICROSOFT_EDGE="Available"
+                fi
+
+                CHOICE=
+
+            else
+                # "CHOICE" contains more than one number, or is blank.
+                # Break out of the while-loop.
+                CHOICE=" "
             fi
-
-            CHOICE=
-
-        elif [ "4" = "${CHOICE}" ]
-        then
-            if [ "Available" = "${SEL_MICROSOFT_EDGE}" ]
-            then
-                SEL_MICROSOFT_EDGE="Selected "
-
-            elif [ "Selected " = "${SEL_MICROSOFT_EDGE}" ]
-            then
-                SEL_MICROSOFT_EDGE="Available"
-            fi
-
-            CHOICE=
-
-        else
-            # "CHOICE" contains more than one number, or is blank.
-            # Break out of the while-loop.
-            CHOICE=" "
-        fi
-    done
+        done
+    fi
 
 ################################################################
 # Copying "Native messaging application"
 
-    clear 2>/dev/null
+    if [ ! "YES" = "${INSTALL_ALL}" ]
+    then
+        clear 2>/dev/null
+    fi
 
     printf "%s\n" "${__}"
     printf "* Asserting that the destination directory exists...\n"
 
     if ! mkdir -p "${TARGET_PATH}"
     then
+        if [ ! "YES" = "${INSTALL_ALL}" ]
+        then
+            read -r _
+        fi
+
         exit 1
     fi
 
@@ -314,6 +379,11 @@ printf "%s\n" "${__}"
 
     if ! cp "${APP_PATH}/${APP_NAME}" "${TARGET_PATH}/${APP_NAME}"
     then
+        if [ ! "YES" = "${INSTALL_ALL}" ]
+        then
+            read -r _
+        fi
+
         exit 1
     fi
 
@@ -330,6 +400,11 @@ printf "%s\n" "${__}"
 
         if ! mkdir -p "${TARGET_DIR_FIREFOX}"
         then
+            if [ ! "YES" = "${INSTALL_ALL}" ]
+            then
+                read -r _
+            fi
+
             exit 1
         fi
 
@@ -354,6 +429,11 @@ printf "%s\n" "${__}"
 
         if ! mkdir -p "${TARGET_DIR_CHROMIUM}"
         then
+            if [ ! "YES" = "${INSTALL_ALL}" ]
+            then
+                read -r _
+            fi
+
             exit 1
         fi
 
@@ -378,6 +458,11 @@ printf "%s\n" "${__}"
 
         if ! mkdir -p "${TARGET_DIR_GOOGLE_CHROME}"
         then
+            if [ ! "YES" = "${INSTALL_ALL}" ]
+            then
+                read -r _
+            fi
+
             exit 1
         fi
 
@@ -402,6 +487,11 @@ printf "%s\n" "${__}"
 
         if ! mkdir -p "${TARGET_DIR_MICROSOFT_EDGE}"
         then
+            if [ ! "YES" = "${INSTALL_ALL}" ]
+            then
+                read -r _
+            fi
+
             exit 1
         fi
 
@@ -422,10 +512,18 @@ printf "%s\n" "${__}"
 # Installation Success
 
     printf "\n%s\n" "${__}"
-    printf "Installation Success! (press Any Key to exit)\n"
 
-    read -r _
-    clear 2>/dev/null
+    if [ "YES" = "${INSTALL_ALL}" ]
+    then
+        printf "Installation Success!\n"
+
+    else
+        printf "Installation Success! (press Any Key to exit)\n"
+
+        read -r _
+        clear 2>/dev/null
+    fi
+
     exit 0
 
 ################################################################
