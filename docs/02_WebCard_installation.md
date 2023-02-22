@@ -97,10 +97,16 @@ This development version requires manual installation of the unpacked extension.
 
 2. Launch the **`install`** script.
 
-    * on **Microsoft Windows**:
+    * on **Microsoft Windows** (*using `MSYS2`*):
 
         ```
-        install
+        "${COMSPEC}" /C "INSTALL"
+        ```
+
+    * on **Microsoft Windows** (*using `CMD`*):
+
+        ```
+        "%ComSpec%" /C "INSTALL"
         ```
 
     * on **Linux** and **macOS**:
@@ -130,18 +136,21 @@ Included in the **`install`** directory is the **`autobuild`** script, which doe
 
 Launching the **`autobuild`** script:
 
-* on **Microsoft Windows**:
+* on **Microsoft Windows** (*using `MSYS2`*):
 
     ```
-    cd install
-    autobuild
+    "${COMSPEC}" /C "INSTALL\AUTOBUILD"
+    ```
+* on **Microsoft Windows** (*using `CMD`*):
+
+    ```
+    "%ComSpec%" /C "INSTALL\AUTOBUILD"
     ```
 
 * on **Linux** and **macOS**:
 
     ```
-    chmod u+x autobuild.sh
-    ./autobuild.sh
+    sh install/autobuild.sh
     ```
 
 This way, you can build the Native App first, and then sideload the extension into a Web Browser of your choice (*without needing to know the extension ID*).

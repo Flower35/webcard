@@ -55,18 +55,18 @@ Instructions for selected Operating Systems.
 
     * Install and launch the `MSYS2` environment.
 
-    * To install **`make`**, **`windres`** and **`gcc`** for 32-bit architectures, type:
+    * To install **`make`**, **`windres`** and **`gcc`** for 32-bit architectures (*`MSYS2 MINGW32`*), type:
 
         ```
-        sudo pacman -Sy
-        sudo pacman -S mingw-w64-i686-make mingw-w64-i686-gcc
+        pacman -Sy
+        pacman -S mingw-w64-i686-make mingw-w64-i686-gcc
         ```
 
-    * To install **`make`**, **`windres`** and **`gcc`** for 64-bit architectures, type:
+    * To install **`make`**, **`windres`** and **`gcc`** for 64-bit architectures (*`MSYS2 MINGW64`*), type:
 
         ```
-        sudo pacman -Sy
-        sudo pacman -S mingw-w64-x86_64-make mingw-w64-x86_64-gcc
+        pacman -Sy
+        pacman -S mingw-w64-x86_64-make mingw-w64-x86_64-gcc
         ```
 
 * If you choose not to use the **`MSYS2`** environment, then **`mingw32-make.exe`**, **`windres.exe`** and **`gcc.exe`** can be downloaded from https://www.mingw-w64.org/downloads/#mingw-builds
@@ -122,7 +122,7 @@ Instructions for selected Operating Systems.
     * on **Microsoft Windows**:
 
         ```
-        mingw32-make release -B
+        mingw32-make.exe release -B
         ```
 
     * on **Linux** and **macOS**:

@@ -1,6 +1,7 @@
 @ECHO OFF
 
 SETLOCAL
+CD "%~dp0%"
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Check for tools: "mingw32-make", "gcc", "python3".
@@ -41,7 +42,7 @@ ECHO.
     ECHO * "Python3": OK
 
     IF EXIST ".\INSTALL.CMD" GOTO STEP_01F
-        ECHO * ERROR: Missing "INSTALL.CMD"!
+        ECHO * ERROR: Missing ".\INSTALL.CMD"!
         EXIT /B 1
 
 :STEP_01F
@@ -55,15 +56,15 @@ ECHO Running "make"...
 ECHO.
 
 :STEP_02A
-    PUSHD .
-    CD ..\native
-    mingw32-make.exe release -B
+    SETLOCAL
+        CD ..\native
+        mingw32-make.exe release -B
+    ENDLOCAL
+
     IF NOT ERRORLEVEL 1 GOTO STEP_02B
-        POPD
         EXIT /B 1
 
 :STEP_02B
-    POPD
     ECHO.
     ECHO * "make": OK
 
@@ -75,7 +76,10 @@ ECHO Calculating Chromium extension ID...
 ECHO.
 
 :STEP_03A
-    python.exe -c "import os, hashlib; print(''.join([chr(int(x, base=16) + ord('a')) for x in hashlib.sha256(os.path.abspath('../extension/chromium').encode('UTF-16LE')).hexdigest()[:32]]))" 1>ID_CHROMIUM.txt
+    FOR %%a IN ("..\extension\chromium\") DO SET EXTENSION_PATH=%%~dpa
+    FOR %%a IN ("%EXTENSION_PATH%.") DO SET EXTENSION_PATH=%%~fa
+
+    python.exe -c "import sys, hashlib; print(''.join([chr(int(x, base=16) + ord('a')) for x in hashlib.sha256(sys.argv[1].encode('UTF-16LE')).hexdigest()[:32]]))" "%EXTENSION_PATH%" 1>ID_CHROMIUM.txt
     IF NOT ERRORLEVEL 1 GOTO STEP_03B
         EXIT /B 1
 
@@ -86,11 +90,11 @@ ECHO.
 :: Run the installation script with special argument
 
 ECHO.
-ECHO Running "INSTALL.CMD /ALL"...
+ECHO Calling ".\INSTALL.CMD /ALL"...
 ECHO.
 
 :STEP_04A
-    CALL "INSTALL.CMD" /ALL
+    CALL ".\INSTALL.CMD" /ALL
     IF NOT ERRORLEVEL 1 GOTO STEP_04B
         EXIT /B 1
 

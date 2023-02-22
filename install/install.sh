@@ -73,6 +73,7 @@ printf "%s\n" "${__}"
             read -r _
         fi
 
+        return 1 2>/dev/null
         exit 1
     fi
 
@@ -94,6 +95,7 @@ printf "%s\n" "${__}"
             read -r _
         fi
 
+        return 1 2>/dev/null
         exit 1
     fi
 
@@ -122,6 +124,7 @@ printf "%s\n" "${__}"
             read -r _
         fi
 
+        return 1 2>/dev/null
         exit 1
     fi
 
@@ -369,6 +372,7 @@ printf "%s\n" "${__}"
             read -r _
         fi
 
+        return 1 2>/dev/null
         exit 1
     fi
 
@@ -384,6 +388,7 @@ printf "%s\n" "${__}"
             read -r _
         fi
 
+        return 1 2>/dev/null
         exit 1
     fi
 
@@ -405,6 +410,7 @@ printf "%s\n" "${__}"
                 read -r _
             fi
 
+            return 1 2>/dev/null
             exit 1
         fi
 
@@ -434,6 +440,7 @@ printf "%s\n" "${__}"
                 read -r _
             fi
 
+            return 1 2>/dev/null
             exit 1
         fi
 
@@ -463,6 +470,7 @@ printf "%s\n" "${__}"
                 read -r _
             fi
 
+            return 1 2>/dev/null
             exit 1
         fi
 
@@ -492,6 +500,7 @@ printf "%s\n" "${__}"
                 read -r _
             fi
 
+            return 1 2>/dev/null
             exit 1
         fi
 
@@ -518,12 +527,13 @@ printf "%s\n" "${__}"
         printf "Installation Success!\n"
 
     else
-        printf "Installation Success! (press Any Key to exit)\n"
+        printf "Installation Success! (press Enter to exit)\n"
 
         read -r _
         clear 2>/dev/null
     fi
 
+    return 0 2>/dev/null
     exit 0
 
 ################################################################

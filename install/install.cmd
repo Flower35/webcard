@@ -1,6 +1,7 @@
 @ECHO OFF
 
 SETLOCAL
+CD "%~dp0%"
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Check for special argument "INSTALL.CMD /ALL"
