@@ -44,9 +44,18 @@ function nativePortCallback(msg)
     {
         // Message originating from the [Native App].
         // Broadcast to all content ports.
-        contentPorts.forEach((port) =>
+        contentPorts.forEach((port, senderId) =>
         {
-            port.postMessage(msg);
+            try
+            {
+                port.postMessage(msg);
+            }
+            catch (error)
+            {
+                // Assuming that given content port is disconnected:
+                // "Error: Attempting to use a disconnected port object"
+                contentPorts.delete(senderId);
+            }
         });
     }
 }
@@ -56,7 +65,7 @@ function connectWithNativeApp()
 {
     nativePort = chrome.runtime.connectNative(hostName);
 
-    nativePort.onDisconnect.addListener((port) =>
+    nativePort.onDisconnect.addListener(() =>
     {
         // Invalidate the port to [Native App]
         // (requiring a reconnection later).
@@ -88,34 +97,29 @@ chrome.runtime.onConnect.addListener((contentPort) =>
 
     // Register this [content port] once.
     let senderId = contentPort.sender.tab.id.toString();
-    contentPorts.set(senderId, contentPort);
 
     // Called when [content script's tab] sends a [webcard request].
     contentPort.onMessage.addListener((msg) =>
     {
-        if (msg)
+        if (msg && (typeof msg.i === 'string'))
         {
-            if (typeof msg.i === 'string')
+            if (!contentPorts.has(senderId))
             {
-                let requestId = msg.i;
-
-                msg.i = packMessageId(senderId, requestId);
-                console.log(`>> ${JSON.stringify(msg)}`);
-
-                if (!nativePort)
-                {
-                    // Connecting for the first time
-                    // (or reconnecting) with the [Native App].
-                    connectWithNativeApp();
-                }
-
-                nativePort.postMessage(msg);
+                contentPorts.set(senderId, contentPort);
             }
-        }
-        else
-        {
-            // [content script's tab] is being closed.
-            contentPorts.delete(senderId);
+
+            let requestId = msg.i;
+            msg.i = packMessageId(senderId, requestId);
+            console.log(`>> ${JSON.stringify(msg)}`);
+
+            if (!nativePort)
+            {
+                // Connecting for the first time
+                // (or reconnecting) with the [Native App].
+                connectWithNativeApp();
+            }
+
+            nativePort.postMessage(msg);
         }
     });
 });
